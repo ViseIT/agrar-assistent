@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spritzrechner</title>
+  <meta name="description" content="Spritzrechner: Tankbefüllung und Mischmengen berechnen. PSM-Zulassungsdaten live vom BVL. Läuft lokal im Browser, ohne Server." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff9900' d='M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z'/%3E%3C/svg%3E" />
+  <style>
+    /* =====================================================================
+       Design-Tokens (Material 3, Seed #FF9900)
+       ===================================================================== */
+    :root {
+      color-scheme: dark;
+
+      /* Farb-Tokens (Dark, Seed #FF9900) */
+      --mat-sys-primary: #ff9900;
+      --mat-sys-on-primary: #4a2800;
+      --mat-sys-primary-container: #764100;
+      --mat-sys-on-primary-container: #ffc770;
+      --mat-sys-surface: #161616;
+      --mat-sys-surface-container: #262626;
+      --mat-sys-surface-container-low: #1e1e1e;
+      --mat-sys-surface-container-high: #313131;
+      --mat-sys-surface-container-highest: #3d3d3d;
+      --mat-sys-background: #131313;
+      --mat-sys-on-surface: #e5e2e1;
+      --mat-sys-on-surface-variant: #e7e1df;
+      --mat-sys-outline: #94908e;
+      --mat-sys-outline-variant: #494644;
+      --mat-sys-error: #ffb4ab;
+      --mat-sys-on-error: #690005;
+      --mat-sys-corner-small: 8px;
+      --mat-sys-corner-large: 16px;
+      --mat-sys-corner-full: 9999px;
+      --mat-sys-level1: 0px 2px 1px -1px rgba(0,0,0,.2), 0px 1px 1px 0px rgba(0,0,0,.14), 0px 1px 3px 0px rgba(0,0,0,.12);
+
+      /* Spacing / Typo */
+      --spacing-xxs: 2px;
+      --spacing-xs: 4px;
+      --spacing-s: 8px;
+      --spacing-sm: 12px;
+      --spacing-m: 16px;
+      --spacing-l: 24px;
+      --spacing-xl: 32px;
+      --font-xs: 0.75rem;
+      --font-s: 0.875rem;
+      --font-m: 1rem;
+      --font-l: 1.25rem;
+      --font-xl: 1.5rem;
+      --font-weight-medium: 500;
+      --font-weight-semibold: 600;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--mat-sys-background);
+      color: var(--mat-sys-on-surface);
+      font-family: Roboto, "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+    }
+
+    .page { padding: var(--spacing-l); max-width: 800px; margin: 0 auto; }
+
+    /* Kopfzeile */
+    .app-header {
+      display: flex; align-items: center; gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-m);
+    }
+    .app-header__logo {
+      width: 40px; height: 40px; flex: 0 0 auto;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--mat-sys-primary); color: var(--mat-sys-on-primary);
+      border-radius: var(--mat-sys-corner-small);
+    }
+    .app-header__logo svg { width: 24px; height: 24px; }
+    .app-header__titles { display: flex; flex-direction: column; }
+    .app-header__brand { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); letter-spacing: .4px; text-transform: uppercase; }
+    .app-header__title { font-size: var(--font-xl); font-weight: var(--font-weight-semibold); line-height: 1.1; }
+
+    /* Karte */
+    .card {
+      background: var(--mat-sys-surface-container-low);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: var(--mat-sys-corner-large);
+      box-shadow: var(--mat-sys-level1);
+      padding: var(--spacing-l);
+    }
+
+    .calculator-layout { display: flex; flex-direction: column; gap: var(--spacing-m); }
+    .input-section { display: flex; flex-direction: column; gap: var(--spacing-s); }
+
+    .grid-inputs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: var(--spacing-m); margin: var(--spacing-m) 0;
+    }
+
+    /* Formularfelder (schlanker Material-Fill-Look) */
+    .field { position: relative; display: flex; flex-direction: column; }
+    .field > label {
+      font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant);
+      margin-bottom: var(--spacing-xxs);
+    }
+    .field input {
+      width: 100%; font: inherit; color: var(--mat-sys-on-surface);
+      background: var(--mat-sys-surface-container-highest);
+      border: none; border-bottom: 1px solid var(--mat-sys-outline);
+      border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
+      padding: 10px var(--spacing-sm); outline: none;
+    }
+    .field input:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
+    .field input:read-only { color: var(--mat-sys-on-surface-variant); }
+    .field input.invalid { border-bottom-color: var(--mat-sys-error); }
+    .text-right { text-align: right; }
+    .field__error { font-size: var(--font-xs); color: var(--mat-sys-error); margin-top: var(--spacing-xxs); min-height: 1em; }
+    .field__hint { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-top: var(--spacing-xxs); }
+    .field__hint.expired { color: var(--mat-sys-error); font-weight: var(--font-weight-medium); }
+
+    /* Komponenten-Tabelle */
+    .calc-row-header, .calc-row {
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr 0px;
+      column-gap: var(--spacing-m); align-items: start;
+    }
+    .calc-row-header.with-delete, .calc-row.with-delete {
+      grid-template-columns: 1.5fr 1fr 1fr 48px;
+    }
+    .calc-row-header {
+      color: var(--mat-sys-on-surface-variant); font-size: var(--font-s);
+      font-weight: var(--font-weight-medium); margin-bottom: var(--spacing-s);
+      padding: 0 var(--spacing-xs); align-items: center;
+    }
+    .header-label--rate { text-align: center; }
+    .header-label--total { text-align: right; padding-right: var(--spacing-sm); }
+    .calc-row { margin-bottom: var(--spacing-s); }
+
+    .delete-column { display: flex; align-items: center; justify-content: center; padding-top: 2px; }
+    .icon-button {
+      width: 40px; height: 40px; border-radius: var(--mat-sys-corner-full);
+      border: none; background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--mat-sys-error);
+    }
+    .icon-button:hover { background: color-mix(in srgb, var(--mat-sys-error) 12%, transparent); }
+    .icon-button svg { width: 20px; height: 20px; }
+
+    .add-comp-container { display: flex; justify-content: flex-start; margin: var(--spacing-m) 0; }
+    .primary-button {
+      display: inline-flex; align-items: center; gap: var(--spacing-s);
+      background: var(--mat-sys-primary); color: var(--mat-sys-on-primary);
+      border: none; border-radius: var(--mat-sys-corner-small);
+      padding: var(--spacing-s) var(--spacing-l); font: inherit;
+      font-weight: var(--font-weight-medium); cursor: pointer;
+      box-shadow: var(--mat-sys-level1);
+    }
+    .primary-button:hover { filter: brightness(0.92); }
+    .primary-button svg { width: 20px; height: 20px; }
+
+    /* Autocomplete-Dropdown */
+    .autocomplete-panel {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 40;
+      margin-top: 2px; background: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: var(--mat-sys-corner-small);
+      box-shadow: var(--mat-sys-level1);
+      max-height: 320px; overflow-y: auto; display: none;
+    }
+    .autocomplete-panel.open { display: block; }
+    .autocomplete-option { padding: var(--spacing-s) var(--spacing-sm); cursor: pointer; }
+    .autocomplete-option:hover, .autocomplete-option.active { background: var(--mat-sys-outline-variant); }
+    .autocomplete-option__name { font-size: var(--font-m); color: var(--mat-sys-on-surface); }
+    .autocomplete-option__meta { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-top: 1px; }
+    .autocomplete-option__meta.expired { color: var(--mat-sys-error); }
+    .autocomplete-status { padding: var(--spacing-s) var(--spacing-sm); font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); }
+
+    /* Summenzeile */
+    .summary-total-row {
+      display: flex; justify-content: flex-end; align-items: baseline;
+      gap: var(--spacing-sm); margin-top: var(--spacing-m);
+      padding: var(--spacing-sm) var(--spacing-m);
+      background: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: var(--mat-sys-corner-small);
+    }
+    .summary-total-row__label { color: var(--mat-sys-on-surface-variant); font-weight: var(--font-weight-medium); }
+    .summary-total-row__total-value { color: var(--mat-sys-primary); font-weight: var(--font-weight-semibold); font-size: var(--font-l); }
+
+    .limit-warning {
+      display: flex; align-items: center; gap: var(--spacing-s);
+      margin-top: var(--spacing-sm); padding: var(--spacing-sm) var(--spacing-m);
+      background: color-mix(in srgb, var(--mat-sys-error) 10%, transparent);
+      color: var(--mat-sys-error); border: 1px solid var(--mat-sys-error);
+      border-radius: var(--mat-sys-corner-small); font-weight: var(--font-weight-medium);
+    }
+    .limit-warning svg { width: 20px; height: 20px; flex: 0 0 auto; }
+
+    .section-divider { border: none; border-top: 1px solid var(--mat-sys-outline-variant); margin: var(--spacing-s) 0; }
+
+    /* Tankfüllungen */
+    .fillings-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
+    .filling-row {
+      display: flex; flex-direction: column;
+      background: var(--mat-sys-surface);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: var(--mat-sys-corner-large); overflow: hidden;
+    }
+    .filling-row__info {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: var(--spacing-sm) var(--spacing-m);
+      background: var(--mat-sys-outline-variant); color: var(--mat-sys-on-surface);
+      border-bottom: 2px solid var(--mat-sys-primary);
+    }
+    .filling-row__index { font-weight: var(--font-weight-semibold); font-size: var(--font-m); }
+    .filling-row__badge {
+      display: flex; gap: var(--spacing-s); align-items: center;
+      background: var(--mat-sys-primary); color: var(--mat-sys-on-primary);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      border-radius: var(--mat-sys-corner-full); font-weight: var(--font-weight-semibold);
+    }
+    .filling-row__badge-label { font-size: var(--font-xs); opacity: .9; }
+    .filling-row__components {
+      padding: var(--spacing-m); display: flex; flex-wrap: wrap;
+      gap: var(--spacing-l); background: var(--mat-sys-surface);
+    }
+    .filling-row__comp { display: flex; flex-direction: column; min-width: 120px; }
+    .filling-row__comp-label {
+      font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant);
+      letter-spacing: .5px; margin-bottom: var(--spacing-xs);
+    }
+    .filling-row__comp-value { font-size: var(--font-m); font-weight: var(--font-weight-medium); color: var(--mat-sys-on-surface); }
+
+    @media (min-width: 768px) {
+      .filling-row { flex-direction: row; }
+      .filling-row__info {
+        flex-direction: column; align-items: flex-start; justify-content: center;
+        width: 200px; border-bottom: none; border-right: 2px solid var(--mat-sys-primary);
+        padding: var(--spacing-m); background: var(--mat-sys-surface-container);
+      }
+      .filling-row__badge {
+        flex-direction: column; align-items: flex-start; background: transparent;
+        color: var(--mat-sys-on-surface); padding: 0; margin-top: var(--spacing-xs);
+      }
+      .filling-row__badge-label { color: var(--mat-sys-on-surface-variant); }
+      .filling-row__badge-value { font-size: var(--font-l); color: var(--mat-sys-primary); }
+    }
+
+    /* Fußzeile */
+    .app-footer {
+      margin-top: var(--spacing-l); font-size: var(--font-xs);
+      color: var(--mat-sys-on-surface-variant); line-height: 1.5; text-align: center;
+    }
+    .app-footer a { color: var(--mat-sys-primary); }
+    .bvl-status { display: inline-flex; align-items: center; gap: var(--spacing-xs); }
+    .bvl-status__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mat-sys-outline); }
+    .bvl-status__dot.online { background: #66bb6a; }
+    .bvl-status__dot.offline { background: var(--mat-sys-error); }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="app-header">
+      <div class="app-header__logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z"/></svg>
+      </div>
+      <div class="app-header__titles">
+        <span class="app-header__title">Spritzrechner</span>
+        <span class="app-header__brand">Tankbefüllung &amp; Mischmengen</span>
+      </div>
+    </header>
+
+    <main class="card">
+      <div class="calculator-layout">
+        <div class="input-section">
+          <div class="grid-inputs">
+            <div class="field">
+              <label for="fieldSize">Größe des Feldes (ha)</label>
+              <input id="fieldSize" type="number" step="0.01" min="0" class="text-right" inputmode="decimal" />
+            </div>
+            <div class="field">
+              <label for="tankCapacity">Tankkapazität der Maschine (L)</label>
+              <input id="tankCapacity" type="number" step="1" min="0" class="text-right" inputmode="decimal" />
+            </div>
+          </div>
+
+          <div class="calc-row-header" id="rowHeader">
+            <span>Komponente</span>
+            <span class="header-label header-label--rate">Aufwandsmenge (L/ha)</span>
+            <span class="header-label header-label--total">Gesamtmenge (L)</span>
+            <span></span>
+          </div>
+
+          <div id="rows"></div>
+
+          <div class="add-comp-container">
+            <button type="button" class="primary-button" id="addBtn">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+              <span>Komponente hinzufügen</span>
+            </button>
+          </div>
+
+          <div class="summary-total-row">
+            <span class="summary-total-row__label">Insgesamt:</span>
+            <span class="summary-total-row__total-value"><span id="totalOverall">0,00</span> L</span>
+          </div>
+
+          <div class="limit-warning" id="limitWarning" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+            <span>Das Limit von 20 Tankfüllungen wurde erreicht. Weitere Füllungen werden nicht berechnet.</span>
+          </div>
+        </div>
+
+        <hr class="section-divider" />
+
+        <div class="fillings-section">
+          <div class="fillings-list" id="fillings"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>
+        <span class="bvl-status">
+          <span class="bvl-status__dot" id="bvlDot"></span>
+          <span id="bvlStatus">PSM-Zulassungsdaten live vom BVL …</span>
+        </span>
+      </p>
+      <p>
+        Angaben ohne Gewähr und ohne Rechtsberatung. Maßgeblich sind die amtliche Zulassung und das Produktetikett.<br />
+        Quelle der Mitteldaten: Bundesamt für Verbraucherschutz und Lebensmittelsicherheit (BVL),
+        <a href="https://psm-api.bvl.bund.de" target="_blank" rel="noopener">psm-api.bvl.bund.de</a>.
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    "use strict";
+
+    // ===== Konstanten =====
+    const WATER_ID = "water";
+    const BVL_BASE = "https://psm-api.bvl.bund.de/ords/psm/api-v1";
+    // Die BVL-WAF blockt Requests mit Origin "null" (lokal geöffnete file://-Datei) mit HTTP 403.
+    // Nur über eine echte http(s)-Herkunft (z. B. GitHub Pages) ist die Mittelsuche möglich.
+    const IS_FILE = location.protocol === "file:";
+    const nf = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const dateFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" });
+
+    // ===== Rundung: identisch zu MathUtils.round der App =====
+    function round(value, decimals = 2) {
+      const factor = Math.pow(10, decimals);
+      return Math.round((value + Number.EPSILON) * factor) / factor;
+    }
+
+    function formatNumber(value) {
+      return value === null || value === undefined || Number.isNaN(value) ? "" : nf.format(value);
+    }
+
+    function formatBvlDate(iso) {
+      if (!iso) return null;
+      const d = new Date(iso);
+      return Number.isNaN(d.getTime()) ? null : dateFmt.format(d);
+    }
+
+    function isExpired(iso) {
+      if (!iso) return false;
+      const d = new Date(iso);
+      return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
+    }
+
+    // ===== Zustand =====
+    const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2));
+    const state = {
+      fieldSizeHa: null,
+      tankCapacityL: null,
+      components: [
+        { id: WATER_ID, name: "Wasser", registrationNumber: "", authEndDate: null, applicationRateLha: null },
+        { id: uid(), name: "", registrationNumber: "", authEndDate: null, applicationRateLha: null },
+      ],
+    };
+
+    // ===== Berechnung: identisch zu calculationResult der App =====
+    function compute() {
+      const fs = Math.max(0, state.fieldSizeHa ?? 0);
+      const tc = Math.max(0, state.tankCapacityL ?? 0);
+
+      const tankComponents = state.components.map((comp) => {
+        const rate = comp.applicationRateLha;
+        const isWater = comp.id === WATER_ID;
+        const totalAmountL = comp.name && rate !== null ? round(fs * rate, isWater ? 0 : 2) : null;
+        return { ...comp, totalAmountL };
+      });
+
+      const activeComponents = tankComponents.filter(
+        (c) => !!c.name && c.totalAmountL !== null && c.totalAmountL > 0
+      );
+
+      const totalOverall = round(
+        activeComponents.reduce((sum, comp) => sum + comp.totalAmountL, 0),
+        0
+      );
+
+      const fillings = [];
+      let limitReached = false;
+      if (tc > 0 && totalOverall > 0) {
+        let remainingTotal = totalOverall;
+        let tankIndex = 1;
+        while (remainingTotal > 0) {
+          if (tankIndex > 20) { limitReached = true; break; }
+          const fillingAmount = round(Math.min(remainingTotal, tc));
+          const ratio = fillingAmount / totalOverall;
+          const fillingComponents = activeComponents.map((comp) => ({
+            name: comp.name,
+            amountL: round(comp.totalAmountL * ratio, comp.id === WATER_ID ? 0 : 2),
+          }));
+          fillings.push({ index: tankIndex, totalFillingAmountL: fillingAmount, components: fillingComponents });
+          remainingTotal = round(remainingTotal - fillingAmount);
+          tankIndex++;
+        }
+
+        // Ausgleich, damit Summe je Komponente über alle Füllungen = Gesamtmenge
+        activeComponents.forEach((comp) => {
+          const sumInFillings = fillings.reduce((sum, f) => {
+            const fc = f.components.find((c) => c.name === comp.name);
+            return sum + (fc ? fc.amountL : 0);
+          }, 0);
+          const diff = round(comp.totalAmountL - sumInFillings);
+          if (diff !== 0 && fillings.length > 0) {
+            const lastFC = fillings[fillings.length - 1].components.find((c) => c.name === comp.name);
+            if (lastFC) lastFC.amountL = round(lastFC.amountL + diff, comp.id === WATER_ID ? 0 : 2);
+          }
+        });
+      }
+
+      return { components: tankComponents, totalAmountOverallL: totalOverall, fillings, limitReached };
+    }
+
+    // ===== DOM-Referenzen =====
+    const rowsEl = document.getElementById("rows");
+    const rowHeaderEl = document.getElementById("rowHeader");
+    const fillingsEl = document.getElementById("fillings");
+    const totalOverallEl = document.getElementById("totalOverall");
+    const limitWarningEl = document.getElementById("limitWarning");
+
+    function svgIcon(path) {
+      return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="${path}"/></svg>`;
+    }
+    const ICON_DELETE = "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // ===== Rendern der Komponentenzeilen (nur bei add/remove) =====
+    function renderRows() {
+      const multi = state.components.length > 1;
+      rowHeaderEl.classList.toggle("with-delete", multi);
+      rowsEl.innerHTML = "";
+
+      state.components.forEach((comp) => {
+        const isWater = comp.id === WATER_ID;
+        const row = document.createElement("div");
+        row.className = "calc-row" + (multi ? " with-delete" : "");
+        row.dataset.id = comp.id;
+
+        // Komponenten-Feld
+        const nameField = document.createElement("div");
+        nameField.className = "field";
+        if (isWater) {
+          nameField.innerHTML = `<input type="text" value="Wasser" readonly aria-label="Komponente (Wasser)" />`;
+        } else {
+          nameField.innerHTML = `
+            <input type="text" class="comp-name" placeholder="Bitte wählen" autocomplete="off"
+                   spellcheck="false" aria-label="Komponente" value="${escapeHtml(comp.name)}" />
+            <div class="autocomplete-panel"></div>
+            <div class="field__hint comp-hint"></div>`;
+        }
+
+        // Aufwandsmenge
+        const rateField = document.createElement("div");
+        rateField.className = "field";
+        rateField.innerHTML = `
+          <input type="number" step="0.01" min="0" class="comp-rate text-right"
+                 inputmode="decimal" aria-label="Aufwandsmenge (L/ha)" value="${comp.applicationRateLha ?? ""}" />`;
+
+        // Gesamtmenge (readonly)
+        const totalField = document.createElement("div");
+        totalField.className = "field";
+        totalField.innerHTML = `<input type="text" class="comp-total text-right" readonly aria-label="Gesamtmenge (L)" />`;
+
+        // Löschen
+        const delCol = document.createElement("div");
+        delCol.className = "delete-column";
+        if (multi && !isWater) {
+          delCol.innerHTML = `<button type="button" class="icon-button comp-delete" title="Entfernen" aria-label="Entfernen">${svgIcon(ICON_DELETE)}</button>`;
+        }
+
+        row.append(nameField, rateField, totalField, delCol);
+        rowsEl.appendChild(row);
+
+        // Events verdrahten
+        const rateInput = rateField.querySelector(".comp-rate");
+        rateInput.addEventListener("input", () => {
+          const v = rateInput.value.trim();
+          comp.applicationRateLha = v === "" ? null : Number.parseFloat(v);
+          if (Number.isNaN(comp.applicationRateLha)) comp.applicationRateLha = null;
+          renderResults();
+        });
+
+        if (!isWater) {
+          setupAutocomplete(nameField, comp);
+          updateCompHint(nameField, comp);
+          const delBtn = delCol.querySelector(".comp-delete");
+          if (delBtn) delBtn.addEventListener("click", () => {
+            state.components = state.components.filter((c) => c.id !== comp.id);
+            renderRows();
+            renderResults();
+          });
+        }
+      });
+
+      renderResults();
+    }
+
+    function updateCompHint(nameField, comp) {
+      const hint = nameField.querySelector(".comp-hint");
+      if (!hint) return;
+      if (comp.registrationNumber) {
+        const validTxt = comp.authEndDate ? " · gültig bis " + formatBvlDate(comp.authEndDate) : "";
+        const expired = isExpired(comp.authEndDate);
+        hint.textContent = "Zul.-Nr. " + comp.registrationNumber + validTxt + (expired ? " (abgelaufen)" : "");
+        hint.classList.toggle("expired", expired);
+      } else {
+        hint.textContent = "";
+        hint.classList.remove("expired");
+      }
+    }
+
+    // ===== Ergebnis rendern (bei jeder Eingabe) =====
+    function renderResults() {
+      const result = compute();
+
+      // Gesamtmengen je Zeile
+      result.components.forEach((comp) => {
+        const row = rowsEl.querySelector(`.calc-row[data-id="${comp.id}"]`);
+        if (row) {
+          const totalInput = row.querySelector(".comp-total");
+          if (totalInput) totalInput.value = formatNumber(comp.totalAmountL);
+        }
+      });
+
+      totalOverallEl.textContent = formatNumber(result.totalAmountOverallL) || "0,00";
+      limitWarningEl.style.display = result.limitReached ? "flex" : "none";
+
+      // Tankfüllungen
+      fillingsEl.innerHTML = "";
+      result.fillings.forEach((filling) => {
+        const el = document.createElement("div");
+        el.className = "filling-row";
+        const comps = filling.components
+          .map(
+            (c) => `
+            <div class="filling-row__comp">
+              <span class="filling-row__comp-label">${escapeHtml(c.name)}</span>
+              <span class="filling-row__comp-value">${formatNumber(c.amountL)} L</span>
+            </div>`
+          )
+          .join("");
+        el.innerHTML = `
+          <div class="filling-row__info">
+            <span class="filling-row__index">${filling.index}. Tank</span>
+            <div class="filling-row__badge">
+              <span class="filling-row__badge-label">Füllmenge (L)</span>
+              <span class="filling-row__badge-value">${formatNumber(filling.totalFillingAmountL)} L</span>
+            </div>
+          </div>
+          <div class="filling-row__components">${comps}</div>`;
+        fillingsEl.appendChild(el);
+      });
+    }
+
+    // ===== Autocomplete gegen die BVL-API =====
+    function setupAutocomplete(nameField, comp) {
+      const input = nameField.querySelector(".comp-name");
+      const panel = nameField.querySelector(".autocomplete-panel");
+      let debounceTimer = null;
+      let abortCtrl = null;
+      let activeIndex = -1;
+      let currentOptions = [];
+
+      function closePanel() { panel.classList.remove("open"); activeIndex = -1; }
+
+      function selectOption(opt) {
+        comp.name = opt.mittelname;
+        comp.registrationNumber = opt.kennr || "";
+        comp.authEndDate = opt.zul_ende || null;
+        input.value = opt.mittelname;
+        updateCompHint(nameField, comp);
+        closePanel();
+        renderResults();
+      }
+
+      function renderPanel(options, statusText) {
+        currentOptions = options;
+        activeIndex = -1;
+        if (statusText) {
+          panel.innerHTML = `<div class="autocomplete-status">${escapeHtml(statusText)}</div>`;
+          panel.classList.add("open");
+          return;
+        }
+        if (!options.length) { closePanel(); return; }
+        panel.innerHTML = options
+          .map((o, i) => {
+            const valid = o.zul_ende ? "gültig bis " + formatBvlDate(o.zul_ende) : "";
+            const expired = isExpired(o.zul_ende);
+            const meta = [o.kennr ? "Zul.-Nr. " + o.kennr : "", valid].filter(Boolean).join(" · ") + (expired ? " (abgelaufen)" : "");
+            return `<div class="autocomplete-option" data-i="${i}">
+                <div class="autocomplete-option__name">${escapeHtml(o.mittelname)}</div>
+                <div class="autocomplete-option__meta${expired ? " expired" : ""}">${escapeHtml(meta)}</div>
+              </div>`;
+          })
+          .join("");
+        panel.classList.add("open");
+        panel.querySelectorAll(".autocomplete-option").forEach((el) => {
+          el.addEventListener("mousedown", (e) => { e.preventDefault(); selectOption(options[Number(el.dataset.i)]); });
+        });
+      }
+
+      async function search(term) {
+        if (IS_FILE) { renderPanel([], "Mittelsuche nur in der Online-Version verfügbar – Name frei eingeben"); return; }
+        if (abortCtrl) abortCtrl.abort();
+        abortCtrl = new AbortController();
+        const ctrl = abortCtrl;
+        let timedOut = false;
+        const timeoutId = setTimeout(() => { timedOut = true; ctrl.abort(); }, 8000);
+        if (document.activeElement === input) renderPanel([], "Suche …");
+        try {
+          const q = encodeURIComponent(JSON.stringify({ MITTELNAME: { $instr: term } }));
+          const res = await fetch(`${BVL_BASE}/mittel/?q=${q}&limit=25`, { signal: ctrl.signal });
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const data = await res.json();
+          setBvlOnline(true);
+          // Bereits in anderen Zeilen gewählte Mittel ausblenden
+          const takenNames = state.components.filter((c) => c.id !== comp.id).map((c) => c.name);
+          const seen = new Set();
+          const items = (data.items || []).filter((o) => {
+            if (!o.mittelname || takenNames.includes(o.mittelname) || seen.has(o.mittelname)) return false;
+            seen.add(o.mittelname);
+            return true;
+          });
+          items.sort((a, b) => a.mittelname.localeCompare(b.mittelname, "de"));
+          if (document.activeElement === input) renderPanel(items.slice(0, 20), items.length ? null : "Keine Treffer");
+        } catch (err) {
+          if (err.name === "AbortError" && !timedOut) return; // durch neuen Tastendruck ersetzt
+          setBvlOnline(false);
+          if (document.activeElement === input) renderPanel([], "BVL-Suche nicht erreichbar – freie Eingabe möglich");
+        } finally {
+          clearTimeout(timeoutId);
+        }
+      }
+
+      input.addEventListener("input", () => {
+        const term = input.value.trim();
+        // freie Eingabe zulassen; getroffene Zulassungsdaten verwerfen, wenn Name geändert wird
+        comp.name = input.value;
+        comp.registrationNumber = "";
+        comp.authEndDate = null;
+        updateCompHint(nameField, comp);
+        renderResults();
+
+        clearTimeout(debounceTimer);
+        if (term.length < 2) { closePanel(); return; }
+        debounceTimer = setTimeout(() => search(term), 250);
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (!panel.classList.contains("open") || !currentOptions.length) return;
+        const opts = panel.querySelectorAll(".autocomplete-option");
+        if (e.key === "ArrowDown") { e.preventDefault(); activeIndex = Math.min(activeIndex + 1, opts.length - 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); activeIndex = Math.max(activeIndex - 1, 0); }
+        else if (e.key === "Enter") { if (activeIndex >= 0) { e.preventDefault(); selectOption(currentOptions[activeIndex]); } return; }
+        else if (e.key === "Escape") { closePanel(); return; }
+        else return;
+        opts.forEach((el, i) => el.classList.toggle("active", i === activeIndex));
+        if (opts[activeIndex]) opts[activeIndex].scrollIntoView({ block: "nearest" });
+      });
+
+      input.addEventListener("blur", () => setTimeout(closePanel, 150));
+      input.addEventListener("focus", () => {
+        const term = input.value.trim();
+        if (term.length >= 2 && currentOptions.length) panel.classList.add("open");
+      });
+    }
+
+    // ===== BVL-Statusanzeige =====
+    const bvlDot = document.getElementById("bvlDot");
+    const bvlStatus = document.getElementById("bvlStatus");
+    let bvlOnlineState = null;
+    function setBvlOnline(online) {
+      if (bvlOnlineState === online) return;
+      bvlOnlineState = online;
+      bvlDot.classList.toggle("online", online);
+      bvlDot.classList.toggle("offline", !online);
+      if (!online) bvlStatus.textContent = IS_FILE
+        ? "Lokale Datei: Live-Mittelsuche nicht möglich – Mittelnamen frei eingeben. Für die BVL-Suche die Online-Version öffnen."
+        : "BVL-Suche derzeit nicht erreichbar – Rechner funktioniert offline weiter";
+    }
+
+    async function loadBvlStand() {
+      if (IS_FILE) { setBvlOnline(false); return; }
+      const ctrl = new AbortController();
+      const timeoutId = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const res = await fetch(`${BVL_BASE}/stand/`, { signal: ctrl.signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const datum = data.items && data.items[0] && data.items[0].datum;
+        setBvlOnline(true);
+        bvlStatus.textContent = datum
+          ? "PSM-Zulassungsdaten live vom BVL · Stand " + formatBvlDate(datum)
+          : "PSM-Zulassungsdaten live vom BVL";
+      } catch (err) {
+        setBvlOnline(false);
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    // ===== Top-Level-Eingaben =====
+    const fieldSizeInput = document.getElementById("fieldSize");
+    const tankCapacityInput = document.getElementById("tankCapacity");
+    fieldSizeInput.addEventListener("input", () => {
+      const v = fieldSizeInput.value.trim();
+      state.fieldSizeHa = v === "" ? null : Math.max(0, Number.parseFloat(v));
+      if (Number.isNaN(state.fieldSizeHa)) state.fieldSizeHa = null;
+      renderResults();
+    });
+    tankCapacityInput.addEventListener("input", () => {
+      const v = tankCapacityInput.value.trim();
+      state.tankCapacityL = v === "" ? null : Math.max(0, Number.parseFloat(v));
+      if (Number.isNaN(state.tankCapacityL)) state.tankCapacityL = null;
+      renderResults();
+    });
+
+    document.getElementById("addBtn").addEventListener("click", () => {
+      state.components.push({ id: uid(), name: "", registrationNumber: "", authEndDate: null, applicationRateLha: null });
+      renderRows();
+    });
+
+    // ===== Start =====
+    renderRows();
+    loadBvlStand();
+  </script>
+</body>
+</html>
