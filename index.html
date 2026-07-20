@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spritzrechner</title>
-  <meta name="description" content="Spritzrechner: Tankbefüllung und Mischmengen berechnen. PSM-Zulassungsdaten live vom BVL. Läuft lokal im Browser, ohne Server." />
+  <meta name="description" content="Spritzrechner: Gesamtmengen und Tankfüllungen berechnen, mit Mittelsuche über die BVL-Zulassungsdaten. Läuft im Browser, ohne Server." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff9900' d='M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z'/%3E%3C/svg%3E" />
   <style>
     /* =====================================================================
@@ -78,7 +78,6 @@
     }
     .app-header__logo svg { width: 24px; height: 24px; }
     .app-header__titles { display: flex; flex-direction: column; }
-    .app-header__brand { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); letter-spacing: .4px; text-transform: uppercase; }
     .app-header__title { font-size: var(--font-xl); font-weight: var(--font-weight-semibold); line-height: 1.1; }
 
     /* Karte */
@@ -252,10 +251,6 @@
       color: var(--mat-sys-on-surface-variant); line-height: 1.5; text-align: center;
     }
     .app-footer a { color: var(--mat-sys-primary); }
-    .bvl-status { display: inline-flex; align-items: center; gap: var(--spacing-xs); }
-    .bvl-status__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mat-sys-outline); }
-    .bvl-status__dot.online { background: #66bb6a; }
-    .bvl-status__dot.offline { background: var(--mat-sys-error); }
   </style>
 </head>
 <body>
@@ -266,7 +261,6 @@
       </div>
       <div class="app-header__titles">
         <span class="app-header__title">Spritzrechner</span>
-        <span class="app-header__brand">Tankbefüllung &amp; Mischmengen</span>
       </div>
     </header>
 
@@ -280,7 +274,7 @@
             </div>
             <div class="field">
               <label for="tankCapacity">Tankkapazität der Maschine (L)</label>
-              <input id="tankCapacity" type="number" step="1" min="0" class="text-right" inputmode="decimal" />
+              <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
             </div>
           </div>
 
@@ -321,12 +315,6 @@
 
     <footer class="app-footer">
       <p>
-        <span class="bvl-status">
-          <span class="bvl-status__dot" id="bvlDot"></span>
-          <span id="bvlStatus">PSM-Zulassungsdaten live vom BVL …</span>
-        </span>
-      </p>
-      <p>
         Angaben ohne Gewähr und ohne Rechtsberatung. Maßgeblich sind die amtliche Zulassung und das Produktetikett.<br />
         Quelle der Mitteldaten: Bundesamt für Verbraucherschutz und Lebensmittelsicherheit (BVL),
         <a href="https://psm-api.bvl.bund.de" target="_blank" rel="noopener">psm-api.bvl.bund.de</a>.
@@ -344,6 +332,7 @@
     // Nur über eine echte http(s)-Herkunft (z. B. GitHub Pages) ist die Mittelsuche möglich.
     const IS_FILE = location.protocol === "file:";
     const nf = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const intFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
     const dateFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" });
 
     // ===== Rundung: identisch zu MathUtils.round der App =====
@@ -639,7 +628,6 @@
           const res = await fetch(`${BVL_BASE}/mittel/?q=${q}&limit=25`, { signal: ctrl.signal });
           if (!res.ok) throw new Error("HTTP " + res.status);
           const data = await res.json();
-          setBvlOnline(true);
           // Bereits in anderen Zeilen gewählte Mittel ausblenden
           const takenNames = state.components.filter((c) => c.id !== comp.id).map((c) => c.name);
           const seen = new Set();
@@ -652,7 +640,6 @@
           if (document.activeElement === input) renderPanel(items.slice(0, 20), items.length ? null : "Keine Treffer");
         } catch (err) {
           if (err.name === "AbortError" && !timedOut) return; // durch neuen Tastendruck ersetzt
-          setBvlOnline(false);
           if (document.activeElement === input) renderPanel([], "BVL-Suche nicht erreichbar – freie Eingabe möglich");
         } finally {
           clearTimeout(timeoutId);
@@ -692,40 +679,6 @@
       });
     }
 
-    // ===== BVL-Statusanzeige =====
-    const bvlDot = document.getElementById("bvlDot");
-    const bvlStatus = document.getElementById("bvlStatus");
-    let bvlOnlineState = null;
-    function setBvlOnline(online) {
-      if (bvlOnlineState === online) return;
-      bvlOnlineState = online;
-      bvlDot.classList.toggle("online", online);
-      bvlDot.classList.toggle("offline", !online);
-      if (!online) bvlStatus.textContent = IS_FILE
-        ? "Lokale Datei: Live-Mittelsuche nicht möglich – Mittelnamen frei eingeben. Für die BVL-Suche die Online-Version öffnen."
-        : "BVL-Suche derzeit nicht erreichbar – Rechner funktioniert offline weiter";
-    }
-
-    async function loadBvlStand() {
-      if (IS_FILE) { setBvlOnline(false); return; }
-      const ctrl = new AbortController();
-      const timeoutId = setTimeout(() => ctrl.abort(), 8000);
-      try {
-        const res = await fetch(`${BVL_BASE}/stand/`, { signal: ctrl.signal });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const data = await res.json();
-        const datum = data.items && data.items[0] && data.items[0].datum;
-        setBvlOnline(true);
-        bvlStatus.textContent = datum
-          ? "PSM-Zulassungsdaten live vom BVL · Stand " + formatBvlDate(datum)
-          : "PSM-Zulassungsdaten live vom BVL";
-      } catch (err) {
-        setBvlOnline(false);
-      } finally {
-        clearTimeout(timeoutId);
-      }
-    }
-
     // ===== Top-Level-Eingaben =====
     const fieldSizeInput = document.getElementById("fieldSize");
     const tankCapacityInput = document.getElementById("tankCapacity");
@@ -735,11 +688,20 @@
       if (Number.isNaN(state.fieldSizeHa)) state.fieldSizeHa = null;
       renderResults();
     });
+    // Tankkapazität als Ganzzahl mit Tausender-Trennzeichen anzeigen (Text-Input erlaubt Gruppierung)
+    function parseGroupedInt(str) {
+      const digits = str.replace(/\D/g, "");
+      return digits === "" ? null : Number.parseInt(digits, 10);
+    }
     tankCapacityInput.addEventListener("input", () => {
-      const v = tankCapacityInput.value.trim();
-      state.tankCapacityL = v === "" ? null : Math.max(0, Number.parseFloat(v));
-      if (Number.isNaN(state.tankCapacityL)) state.tankCapacityL = null;
+      state.tankCapacityL = parseGroupedInt(tankCapacityInput.value);
       renderResults();
+    });
+    tankCapacityInput.addEventListener("focus", () => {
+      tankCapacityInput.value = state.tankCapacityL === null ? "" : String(state.tankCapacityL);
+    });
+    tankCapacityInput.addEventListener("blur", () => {
+      tankCapacityInput.value = state.tankCapacityL === null ? "" : intFmt.format(state.tankCapacityL);
     });
 
     document.getElementById("addBtn").addEventListener("click", () => {
@@ -749,7 +711,6 @@
 
     // ===== Start =====
     renderRows();
-    loadBvlStand();
   </script>
 </body>
 </html>
