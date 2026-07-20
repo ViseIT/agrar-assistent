@@ -1,7 +1,7 @@
-# Spritzrechner
+# PSM-Rechner
 
-Ein eigenständiger **Spritzrechner** für die Feld- und Tankplanung im Pflanzenschutz –
-berechnet die benötigten Gesamtmengen und die Aufteilung auf einzelne Tankfüllungen
+Ein eigenständiger **Pflanzenschutzmittel-Rechner** für die Feld- und Tankplanung –
+berechnet die benötigten Gesamtmengen und die Aufteilung auf einzelne Spritzenfüllungen
 (Tank-Splitting) mit ausgeglichenem Mischverhältnis.
 
 Die Anwendung ist eine **einzige HTML-Datei**. Sie läuft im Browser – kein Server,
@@ -16,8 +16,16 @@ alles inklusive der Live-Mittelsuche.
 **Berechnung** funktioniert vollständig offline. Die **Live-Mittelsuche** ist dabei
 allerdings nicht verfügbar (siehe unten) – Mittelnamen können dann frei eingetippt werden.
 
-Eingeben: Feldgröße (ha), Tankkapazität (L) und je Komponente die Aufwandmenge (L/ha).
-Der Rechner zeigt sofort die Gesamtmengen, die Summe und die einzelnen Tankfüllungen.
+Eingeben: Feldgröße (ha), Tankkapazität (L) und je Komponente die Aufwandmenge samt
+**Einheit** (L, ml, kg, g, Stück, Tabletten – jeweils pro ha). Der Rechner zeigt sofort
+die Gesamtmengen und die einzelnen Spritzenfüllungen.
+
+- **Flüssige Anteile** (Wasser sowie Mittel in L/ml) ergeben die Liter-Füllmenge und
+  bestimmen die Anzahl der Spritzen.
+- **Feste Einheiten** (kg/g/Stück/Tabletten) werden je Spritze anteilig ausgewiesen.
+- Die **Wasserzeile ist optional** – für reine Feststoff-Maßnahmen einfach leer lassen.
+- **Drucken / als PDF speichern** über den Button oben rechts (z. B. zum Weitergeben an
+  den Fahrer).
 
 ## Pflanzenschutzmittel-Suche (BVL)
 

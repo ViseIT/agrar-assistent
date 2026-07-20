@@ -1,9 +1,10 @@
-# Spritzrechner – Claude Project Guidelines
+# PSM-Rechner – Claude Project Guidelines
 
 ## Was ist das?
-Ein **eigenständiger, lokaler Spritzrechner** als **einzelne HTML-Datei** (`index.html`).
-Er läuft ohne Server, ohne Build, ohne Anmeldung direkt im Browser. Auslieferung an den
-Endnutzer erfolgt über dieses GitHub-Repo (Datei-Download bzw. GitHub Pages).
+Ein **eigenständiger, lokaler Pflanzenschutzmittel-Rechner** als **einzelne HTML-Datei**
+(`index.html`). Er läuft ohne Server, ohne Build, ohne Anmeldung direkt im Browser.
+Auslieferung an den Endnutzer erfolgt über dieses GitHub-Repo (Datei-Download bzw.
+GitHub Pages).
 
 ## Sprache
 - **Chat/Kommunikation:** Deutsch.
@@ -15,35 +16,43 @@ Endnutzer erfolgt über dieses GitHub-Repo (Datei-Download bzw. GitHub Pages).
   offline lauffähig bleiben und (für die reine Berechnung) auch per Doppelklick von
   `file://` funktionieren.
 - **Kein Server, kein eigenes Hosting.** Keine Backend-Aufrufe außer der öffentlichen
-  BVL-API (s. u.).
-- **Dark-Theme only.** Farbwerte sind Material-3-Tokens (Seed `#FF9900`), als CSS-Variablen
-  `--mat-sys-*` im `:root`. Keine Light-Variante, keine Theme-Umschaltung.
+  BVL-API (s. u.). Kein Speichern/Persistenz – die Seite hält keinen Zustand über einen
+  Reload hinaus.
+- **Dark-Theme only** (Bildschirm). Farbwerte sind Material-3-Tokens (Seed `#FF9900`) als
+  CSS-Variablen `--mat-sys-*` im `:root`. Ausnahme: der `@media print`-Block nutzt bewusst
+  feste helle Druckfarben (Papier ist hell) – kein Verstoß gegen die Token-Regel.
 - **Icons als inline-SVG** (keine Icon-Fonts).
 
-## Rechenlogik
-Mengen- und Tank-Splitting-Berechnung in `compute()`:
-- Gesamtmenge je Komponente = Feldgröße × Aufwandmenge; **Wasser auf 0**, **Mittel auf 2**
-  Nachkommastellen gerundet (`round(value, decimals)`: `Math.round((v + EPSILON) * f) / f`).
-- Tank-Splitting bis zur Kapazität, proportionale Verteilung je Füllung, Rundungsausgleich
-  auf der letzten Füllung, **Limit 20 Füllungen** (danach Warnhinweis).
-- Anzeige mit `Intl.NumberFormat('de-DE', { min/max 2 })`.
-Änderungen an dieser Logik nur bewusst und getestet (Node-Testskript für Szenarien
-inkl. Rundungsausgleich, Limit, Leereingaben).
+## Rechenlogik (`compute()`)
+- Je Komponente eine **Einheit** (`UNITS`: L, ml, kg, g, Stück, Tabletten). Gesamtmenge =
+  Feldgröße × Aufwandmenge, gerundet über `round(v, decimals)`.
+- **Rundung** (`decimalsFor`): Wasser 0 Dezimalstellen; sonst 0 wenn die Aufwandmenge
+  ganzzahlig ist, sonst 2.
+- **Tank-Splitting:** Nur **flüssige** Anteile (Wasser + Einheiten L/ml, via `liquidPerUnit`
+  in Liter umgerechnet) ergeben die Liter-Füllmenge und bestimmen die Anzahl der Spritzen.
+  **Feste** Einheiten (kg/g/Stück/Tabletten) werden je Spritze nur anteilig ausgewiesen,
+  nicht in die Liter summiert.
+- Proportionale Verteilung je Spritze, **Rundungsausgleich je Komponente per Index** auf
+  der letzten Spritze, **Limit 20 Füllungen**. Ohne Flüssigkeit (`solidsOnly`) gibt es keine
+  Aufteilung, nur einen Hinweis.
+- Die Wasserzeile ist fest (nicht löschbar), aber optional: leer lassen = kein Wasser.
+- Anzeige mit `Intl.NumberFormat('de-DE')` (nf0/nf2); Tankkapazität als gruppierte Ganzzahl.
+- Änderungen an dieser Logik nur bewusst und getestet (Node-Testskript für Szenarien inkl.
+  gemischte Einheiten, Rundungsregel, `solidsOnly`, Limit, Leerfall).
 
 ## BVL-PSM-API
 - Basis: `https://psm-api.bvl.bund.de/ords/psm/api-v1/` (öffentlich, kein Key).
-- **CORS offen** (`Access-Control-Allow-Origin: *`) → direkt aus dem Browser abfragbar,
-  **sofern die Herkunft eine echte http(s)-Adresse ist**.
-- **Wichtig:** Die BVL-WAF blockt Requests mit `Origin: null` (lokal geöffnete
-  `file://`-Datei) mit **HTTP 403**. Live-Mittelsuche funktioniert daher nur über eine
-  echte Web-Adresse (z. B. GitHub Pages). Der Code erkennt `location.protocol === 'file:'`
-  und schaltet dann auf freie Namenseingabe um, statt einen fehlschlagenden Request zu senden.
-- Mittelsuche: `GET /mittel/?q={"MITTELNAME":{"$instr":"<term>"}}&limit=25`
-  (`$instr` ist **case-insensitiv**, Substring). Felder: `mittelname`, `kennr`
-  (Zulassungsnummer), `zul_ende` (Zulassungsende).
-- Aktualität: `GET /stand/` → `datum`.
-- **Fehlertoleranz wahren:** Alle BVL-Aufrufe mit Timeout + `AbortController`; der reine
-  Rechner funktioniert ohne Netz weiter.
+- **CORS offen** (`*`) → direkt aus dem Browser abfragbar, **sofern die Herkunft eine echte
+  http(s)-Adresse ist**. Die WAF blockt `Origin: null` (`file://`) mit **HTTP 403** – der
+  Code erkennt `location.protocol === 'file:'` und schaltet dann auf freie Namenseingabe um.
+- Mittelsuche: `GET /mittel/?q={"MITTELNAME":{"$instr":"<term>"}}&limit=25` (`$instr` =
+  case-insensitiver Substring). Felder: `mittelname`, `kennr`, `zul_ende`.
+- Einheiten/Codes: Kodeliste 25 via `/kode?q={"KODELISTE":25,"SPRACHE":"DE"}`; Kulturen
+  Kodeliste 948 / `/awg_kultur`; Maxdosis in `/awg_aufwand.m_aufwand`. Codes sind nur je
+  Liste eindeutig – beim Auflösen immer `KODELISTE` mitgeben.
+- **Kein Rate-Limit** dokumentiert/erzwungen (verifiziert). Trotzdem: Suche entprellen +
+  laufende Anfrage abbrechen; Zusatzabfragen (AWG/Einheit/Kultur) nur bei Auswahl + pro
+  Session cachen. Alle BVL-Aufrufe mit Timeout + `AbortController`; Rechner läuft ohne Netz.
 
 ## Code-Review
 - Nicht-triviale Änderungen vor dem Commit mit dem `code-reviewer`-Agenten prüfen

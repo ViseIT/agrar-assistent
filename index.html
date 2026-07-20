@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spritzrechner</title>
-  <meta name="description" content="Spritzrechner: Gesamtmengen und Tankfüllungen berechnen, mit Mittelsuche über die BVL-Zulassungsdaten. Läuft im Browser, ohne Server." />
+  <title>PSM-Rechner</title>
+  <meta name="description" content="PSM-Rechner: Gesamtmengen und Füllmengen je Spritze berechnen, mit Mittelsuche über die BVL-Zulassungsdaten. Läuft im Browser, ohne Server." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff9900' d='M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z'/%3E%3C/svg%3E" />
   <style>
     /* =====================================================================
@@ -79,6 +79,7 @@
     .app-header__logo svg { width: 24px; height: 24px; }
     .app-header__titles { display: flex; flex-direction: column; }
     .app-header__title { font-size: var(--font-xl); font-weight: var(--font-weight-semibold); line-height: 1.1; }
+    .app-header .secondary-button { margin-left: auto; }
 
     /* Karte */
     .card {
@@ -93,7 +94,7 @@
     .input-section { display: flex; flex-direction: column; gap: var(--spacing-s); }
 
     .grid-inputs {
-      display: grid; grid-template-columns: 1fr 1fr;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
       gap: var(--spacing-m); margin: var(--spacing-m) 0;
     }
 
@@ -103,14 +104,14 @@
       font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant);
       margin-bottom: var(--spacing-xxs);
     }
-    .field input {
+    .field input, .rate-wrap select, .rate-wrap .unit-fixed {
       width: 100%; font: inherit; color: var(--mat-sys-on-surface);
       background: var(--mat-sys-surface-container-highest);
       border: none; border-bottom: 1px solid var(--mat-sys-outline);
       border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
       padding: 10px var(--spacing-sm); outline: none;
     }
-    .field input:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
+    .field input:focus, .rate-wrap select:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
     .field input:read-only { color: var(--mat-sys-on-surface-variant); }
     .field input.invalid { border-bottom-color: var(--mat-sys-error); }
     .text-right { text-align: right; }
@@ -118,13 +119,19 @@
     .field__hint { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-top: var(--spacing-xxs); }
     .field__hint.expired { color: var(--mat-sys-error); font-weight: var(--font-weight-medium); }
 
+    /* Aufwandmenge + Einheit nebeneinander */
+    .rate-wrap { display: flex; gap: var(--spacing-xs); align-items: stretch; }
+    .rate-wrap .comp-rate { flex: 1 1 auto; min-width: 0; }
+    .rate-wrap select { flex: 0 0 auto; width: auto; padding-left: var(--spacing-xs); padding-right: var(--spacing-xs); cursor: pointer; }
+    .rate-wrap .unit-fixed { flex: 0 0 auto; width: auto; display: flex; align-items: center; color: var(--mat-sys-on-surface-variant); }
+
     /* Komponenten-Tabelle */
     .calc-row-header, .calc-row {
-      display: grid; grid-template-columns: 1.5fr 1fr 1fr 0px;
+      display: grid; grid-template-columns: 1.4fr 1.3fr 1fr 0px;
       column-gap: var(--spacing-m); align-items: start;
     }
     .calc-row-header.with-delete, .calc-row.with-delete {
-      grid-template-columns: 1.5fr 1fr 1fr 48px;
+      grid-template-columns: 1.4fr 1.3fr 1fr 48px;
     }
     .calc-row-header {
       color: var(--mat-sys-on-surface-variant); font-size: var(--font-s);
@@ -156,6 +163,15 @@
     }
     .primary-button:hover { filter: brightness(0.92); }
     .primary-button svg { width: 20px; height: 20px; }
+    .secondary-button {
+      display: inline-flex; align-items: center; gap: var(--spacing-s);
+      background: transparent; color: var(--mat-sys-primary);
+      border: 1px solid var(--mat-sys-outline); border-radius: var(--mat-sys-corner-small);
+      padding: var(--spacing-s) var(--spacing-m); font: inherit;
+      font-weight: var(--font-weight-medium); cursor: pointer;
+    }
+    .secondary-button:hover { background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
+    .secondary-button svg { width: 18px; height: 18px; }
 
     /* Autocomplete-Dropdown */
     .autocomplete-panel {
@@ -195,9 +211,15 @@
     }
     .limit-warning svg { width: 20px; height: 20px; flex: 0 0 auto; }
 
+    .info-note {
+      display: flex; align-items: center; gap: var(--spacing-s);
+      padding: var(--spacing-sm) var(--spacing-m); color: var(--mat-sys-on-surface-variant);
+      font-size: var(--font-s);
+    }
+
     .section-divider { border: none; border-top: 1px solid var(--mat-sys-outline-variant); margin: var(--spacing-s) 0; }
 
-    /* Tankfüllungen */
+    /* Füllungen / Spritzen */
     .fillings-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
     .filling-row {
       display: flex; flex-direction: column;
@@ -251,6 +273,27 @@
       color: var(--mat-sys-on-surface-variant); line-height: 1.5; text-align: center;
     }
     .app-footer a { color: var(--mat-sys-primary); }
+
+    /* Druck-/PDF-Ansicht: helles, tintensparendes Layout ohne Bedien-Chrome.
+       Bewusst feste Druckfarben (keine Dark-Tokens), da Papier hell ist. */
+    @media print {
+      :root { color-scheme: light; }
+      html, body { background: #ffffff; color: #000000; }
+      .page { max-width: none; padding: 0; }
+      .no-print { display: none !important; }
+      .autocomplete-panel { display: none !important; }
+      .card { box-shadow: none; border: 1px solid #999999; background: #ffffff; }
+      .app-header__title, .app-footer, .field > label, .calc-row-header,
+      .summary-total-row__label, .filling-row__comp-label, .filling-row__comp-value,
+      .filling-row__index, .field__hint { color: #000000; }
+      .field input, .rate-wrap select, .rate-wrap .unit-fixed {
+        background: #ffffff; color: #000000; border-bottom: 1px solid #999999;
+      }
+      .summary-total-row, .filling-row, .filling-row__components { background: #ffffff; border-color: #999999; }
+      .filling-row__info { background: #eeeeee; color: #000000; border-color: #ff9900; }
+      .filling-row__badge, .summary-total-row__total-value { color: #b35c00; }
+      .app-footer a { color: #000000; }
+    }
   </style>
 </head>
 <body>
@@ -260,8 +303,12 @@
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z"/></svg>
       </div>
       <div class="app-header__titles">
-        <span class="app-header__title">Spritzrechner</span>
+        <span class="app-header__title">PSM-Rechner</span>
       </div>
+      <button type="button" class="secondary-button no-print" id="printBtn" title="Drucken oder als PDF speichern">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+        <span>Drucken</span>
+      </button>
     </header>
 
     <main class="card">
@@ -276,18 +323,22 @@
               <label for="tankCapacity">Tankkapazität der Maschine (L)</label>
               <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
             </div>
+            <div class="field">
+              <label for="buffer">Puffer (L, optional)</label>
+              <input id="buffer" type="number" step="1" min="0" class="text-right" inputmode="numeric" placeholder="0" />
+            </div>
           </div>
 
           <div class="calc-row-header" id="rowHeader">
             <span>Komponente</span>
-            <span class="header-label header-label--rate">Aufwandsmenge (L/ha)</span>
-            <span class="header-label header-label--total">Gesamtmenge (L)</span>
+            <span class="header-label header-label--rate">Aufwandmenge (pro ha)</span>
+            <span class="header-label header-label--total">Gesamtmenge</span>
             <span></span>
           </div>
 
           <div id="rows"></div>
 
-          <div class="add-comp-container">
+          <div class="add-comp-container no-print">
             <button type="button" class="primary-button" id="addBtn">
               <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
               <span>Komponente hinzufügen</span>
@@ -295,13 +346,13 @@
           </div>
 
           <div class="summary-total-row">
-            <span class="summary-total-row__label">Insgesamt:</span>
-            <span class="summary-total-row__total-value"><span id="totalOverall">0,00</span> L</span>
+            <span class="summary-total-row__label" id="summaryLabel">Gesamt-Füllmenge:</span>
+            <span class="summary-total-row__total-value"><span id="totalOverall">0</span> L</span>
           </div>
 
           <div class="limit-warning" id="limitWarning" style="display:none;">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-            <span>Das Limit von 20 Tankfüllungen wurde erreicht. Weitere Füllungen werden nicht berechnet.</span>
+            <span>Das Limit von 20 Füllungen wurde erreicht. Weitere Füllungen werden nicht berechnet.</span>
           </div>
         </div>
 
@@ -331,18 +382,38 @@
     // Die BVL-WAF blockt Requests mit Origin "null" (lokal geöffnete file://-Datei) mit HTTP 403.
     // Nur über eine echte http(s)-Herkunft (z. B. GitHub Pages) ist die Mittelsuche möglich.
     const IS_FILE = location.protocol === "file:";
-    const nf = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const intFmt = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 0 });
+
+    // Auswählbare Einheiten. liquidPerUnit = Umrechnung in Liter fürs Tankvolumen
+    // (nur flüssige Einheiten treiben die Aufteilung auf Spritzen; Feststoffe = 0).
+    const UNITS = [
+      { code: "L", label: "L", liquidPerUnit: 1 },
+      { code: "ml", label: "ml", liquidPerUnit: 0.001 },
+      { code: "kg", label: "kg", liquidPerUnit: 0 },
+      { code: "g", label: "g", liquidPerUnit: 0 },
+      { code: "Stk", label: "Stück", liquidPerUnit: 0 },
+      { code: "Tab", label: "Tabletten", liquidPerUnit: 0 },
+    ];
+    const UNIT_BY_CODE = Object.fromEntries(UNITS.map((u) => [u.code, u]));
+
+    const nf0 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    const nf2 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const dateFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" });
 
-    // ===== Rundung: identisch zu MathUtils.round der App =====
+    // ===== Rundung: Math.round((v + EPSILON) * f) / f =====
     function round(value, decimals = 2) {
       const factor = Math.pow(10, decimals);
       return Math.round((value + Number.EPSILON) * factor) / factor;
     }
 
-    function formatNumber(value) {
-      return value === null || value === undefined || Number.isNaN(value) ? "" : nf.format(value);
+    // decimals: 0 (ganzzahlig) oder 2. Wasser immer 0; sonst 0 wenn die Aufwandmenge ganzzahlig ist, sonst 2.
+    function decimalsFor(comp) {
+      if (comp.isWater) return 0;
+      return comp.rate !== null && Number.isInteger(comp.rate) ? 0 : 2;
+    }
+
+    function fmt(value, decimals) {
+      if (value === null || value === undefined || Number.isNaN(value)) return "";
+      return decimals >= 2 ? nf2.format(value) : nf0.format(value);
     }
 
     function formatBvlDate(iso) {
@@ -362,66 +433,90 @@
     const state = {
       fieldSizeHa: null,
       tankCapacityL: null,
+      bufferL: null,
       components: [
-        { id: WATER_ID, name: "Wasser", registrationNumber: "", authEndDate: null, applicationRateLha: null },
-        { id: uid(), name: "", registrationNumber: "", authEndDate: null, applicationRateLha: null },
+        { id: WATER_ID, isWater: true, name: "Wasser", unit: "L", rate: null, registrationNumber: "", authEndDate: null },
+        { id: uid(), isWater: false, name: "", unit: "L", rate: null, registrationNumber: "", authEndDate: null },
       ],
     };
 
-    // ===== Berechnung: identisch zu calculationResult der App =====
+    // ===== Berechnung =====
+    // Flüssige Anteile (Wasser + L/ml) ergeben die Liter-Füllmenge und treiben die Anzahl der Spritzen.
+    // Feste Einheiten (kg/g/Stück/Tabletten) werden je Spritze nur anteilig ausgewiesen.
     function compute() {
       const fs = Math.max(0, state.fieldSizeHa ?? 0);
       const tc = Math.max(0, state.tankCapacityL ?? 0);
+      const bufferL = Math.max(0, state.bufferL ?? 0);
 
-      const tankComponents = state.components.map((comp) => {
-        const rate = comp.applicationRateLha;
-        const isWater = comp.id === WATER_ID;
-        const totalAmountL = comp.name && rate !== null ? round(fs * rate, isWater ? 0 : 2) : null;
-        return { ...comp, totalAmountL };
+      // Rohmengen (ungerundet) + Basis-Liquid für den Pufferfaktor
+      const raw = state.components.map((c) => {
+        const unit = UNIT_BY_CODE[c.unit] || UNIT_BY_CODE.L;
+        const hasName = c.isWater || !!c.name;
+        const rawTotal = hasName && c.rate !== null ? fs * c.rate : null;
+        return { comp: c, unit, rawTotal };
       });
-
-      const activeComponents = tankComponents.filter(
-        (c) => !!c.name && c.totalAmountL !== null && c.totalAmountL > 0
-      );
-
-      const totalOverall = round(
-        activeComponents.reduce((sum, comp) => sum + comp.totalAmountL, 0),
+      // Puffer (absolute Liter) wirkt auf die ganze Mischung: alles proportional so hochskalieren,
+      // dass die flüssige Füllmenge um bufferL steigt (Konzentration/Dosierung bleibt gleich).
+      const liquidBase = raw.reduce(
+        (sum, r) => sum + (r.rawTotal !== null && r.rawTotal > 0 ? r.rawTotal * r.unit.liquidPerUnit : 0),
         0
       );
+      const factor = liquidBase > 0 && bufferL > 0 ? (liquidBase + bufferL) / liquidBase : 1;
+
+      const comps = raw.map(({ comp, unit, rawTotal }) => {
+        const decimals = decimalsFor(comp);
+        const total = rawTotal !== null ? round(rawTotal * factor, decimals) : null;
+        const liquidL = total !== null ? total * unit.liquidPerUnit : 0;
+        return { ...comp, unitLabel: unit.label, decimals, total, liquidL };
+      });
+
+      const active = comps.filter((c) => c.total !== null && c.total > 0);
+      const liquidTotalL = round(active.reduce((sum, c) => sum + c.liquidL, 0), 0);
+      const hasLiquid = liquidTotalL > 0;
+      const bufferApplied = factor > 1;
 
       const fillings = [];
       let limitReached = false;
-      if (tc > 0 && totalOverall > 0) {
-        let remainingTotal = totalOverall;
-        let tankIndex = 1;
-        while (remainingTotal > 0) {
-          if (tankIndex > 20) { limitReached = true; break; }
-          const fillingAmount = round(Math.min(remainingTotal, tc));
-          const ratio = fillingAmount / totalOverall;
-          const fillingComponents = activeComponents.map((comp) => ({
-            name: comp.name,
-            amountL: round(comp.totalAmountL * ratio, comp.id === WATER_ID ? 0 : 2),
+      if (tc > 0 && hasLiquid) {
+        let remaining = liquidTotalL;
+        let idx = 1;
+        while (remaining > 0) {
+          if (idx > 20) { limitReached = true; break; }
+          const fuellmengeL = round(Math.min(remaining, tc), 0);
+          const ratio = fuellmengeL / liquidTotalL;
+          const components = active.map((c) => ({
+            name: c.isWater ? "Wasser" : c.name,
+            unitLabel: c.unitLabel,
+            decimals: c.decimals,
+            amount: round(c.total * ratio, c.decimals),
           }));
-          fillings.push({ index: tankIndex, totalFillingAmountL: fillingAmount, components: fillingComponents });
-          remainingTotal = round(remainingTotal - fillingAmount);
-          tankIndex++;
+          fillings.push({ index: idx, fuellmengeL, components });
+          remaining = round(remaining - fuellmengeL, 0);
+          idx++;
         }
 
-        // Ausgleich, damit Summe je Komponente über alle Füllungen = Gesamtmenge
-        activeComponents.forEach((comp) => {
-          const sumInFillings = fillings.reduce((sum, f) => {
-            const fc = f.components.find((c) => c.name === comp.name);
-            return sum + (fc ? fc.amountL : 0);
-          }, 0);
-          const diff = round(comp.totalAmountL - sumInFillings);
+        // Ausgleich je Komponente (per Index), damit die Summe über alle Spritzen = Gesamtmenge ist.
+        active.forEach((c, ci) => {
+          const sumInFillings = fillings.reduce((sum, f) => sum + f.components[ci].amount, 0);
+          const diff = round(c.total - sumInFillings, c.decimals);
           if (diff !== 0 && fillings.length > 0) {
-            const lastFC = fillings[fillings.length - 1].components.find((c) => c.name === comp.name);
-            if (lastFC) lastFC.amountL = round(lastFC.amountL + diff, comp.id === WATER_ID ? 0 : 2);
+            const last = fillings[fillings.length - 1].components[ci];
+            // Nie unter 0 (bei winzigen Mengen über viele Spritzen könnte der Ausgleich sonst negativ werden)
+            last.amount = Math.max(0, round(last.amount + diff, c.decimals));
           }
         });
       }
 
-      return { components: tankComponents, totalAmountOverallL: totalOverall, fillings, limitReached };
+      return {
+        comps,
+        liquidTotalL,
+        hasLiquid,
+        bufferApplied,
+        bufferL,
+        solidsOnly: !hasLiquid && active.length > 0,
+        fillings,
+        limitReached,
+      };
     }
 
     // ===== DOM-Referenzen =====
@@ -429,6 +524,7 @@
     const rowHeaderEl = document.getElementById("rowHeader");
     const fillingsEl = document.getElementById("fillings");
     const totalOverallEl = document.getElementById("totalOverall");
+    const summaryLabelEl = document.getElementById("summaryLabel");
     const limitWarningEl = document.getElementById("limitWarning");
 
     function svgIcon(path) {
@@ -440,6 +536,10 @@
       return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     }
 
+    function unitOptions(selected) {
+      return UNITS.map((u) => `<option value="${u.code}"${u.code === selected ? " selected" : ""}>${escapeHtml(u.label)}/ha</option>`).join("");
+    }
+
     // ===== Rendern der Komponentenzeilen (nur bei add/remove) =====
     function renderRows() {
       const multi = state.components.length > 1;
@@ -447,7 +547,7 @@
       rowsEl.innerHTML = "";
 
       state.components.forEach((comp) => {
-        const isWater = comp.id === WATER_ID;
+        const isWater = comp.isWater;
         const row = document.createElement("div");
         row.className = "calc-row" + (multi ? " with-delete" : "");
         row.dataset.id = comp.id;
@@ -465,21 +565,33 @@
             <div class="field__hint comp-hint"></div>`;
         }
 
-        // Aufwandsmenge
+        // Aufwandmenge + Einheit
         const rateField = document.createElement("div");
         rateField.className = "field";
-        rateField.innerHTML = `
-          <input type="number" step="0.01" min="0" class="comp-rate text-right"
-                 inputmode="decimal" aria-label="Aufwandsmenge (L/ha)" value="${comp.applicationRateLha ?? ""}" />`;
+        if (isWater) {
+          rateField.innerHTML = `
+            <div class="rate-wrap">
+              <input type="number" step="0.01" min="0" class="comp-rate text-right"
+                     inputmode="decimal" aria-label="Wasser-Aufwandmenge (L/ha)" value="${comp.rate ?? ""}" />
+              <span class="unit-fixed">L/ha</span>
+            </div>`;
+        } else {
+          rateField.innerHTML = `
+            <div class="rate-wrap">
+              <input type="number" step="0.01" min="0" class="comp-rate text-right"
+                     inputmode="decimal" aria-label="Aufwandmenge pro ha" value="${comp.rate ?? ""}" />
+              <select class="comp-unit" aria-label="Einheit">${unitOptions(comp.unit)}</select>
+            </div>`;
+        }
 
         // Gesamtmenge (readonly)
         const totalField = document.createElement("div");
         totalField.className = "field";
-        totalField.innerHTML = `<input type="text" class="comp-total text-right" readonly aria-label="Gesamtmenge (L)" />`;
+        totalField.innerHTML = `<input type="text" class="comp-total text-right" readonly aria-label="Gesamtmenge" />`;
 
-        // Löschen
+        // Löschen (Wasserzeile bleibt bestehen; leer lassen = kein Wasser)
         const delCol = document.createElement("div");
-        delCol.className = "delete-column";
+        delCol.className = "delete-column no-print";
         if (multi && !isWater) {
           delCol.innerHTML = `<button type="button" class="icon-button comp-delete" title="Entfernen" aria-label="Entfernen">${svgIcon(ICON_DELETE)}</button>`;
         }
@@ -491,10 +603,13 @@
         const rateInput = rateField.querySelector(".comp-rate");
         rateInput.addEventListener("input", () => {
           const v = rateInput.value.trim();
-          comp.applicationRateLha = v === "" ? null : Number.parseFloat(v);
-          if (Number.isNaN(comp.applicationRateLha)) comp.applicationRateLha = null;
+          comp.rate = v === "" ? null : Number.parseFloat(v);
+          if (Number.isNaN(comp.rate)) comp.rate = null;
           renderResults();
         });
+
+        const unitSel = rateField.querySelector(".comp-unit");
+        if (unitSel) unitSel.addEventListener("change", () => { comp.unit = unitSel.value; renderResults(); });
 
         if (!isWater) {
           setupAutocomplete(nameField, comp);
@@ -503,7 +618,6 @@
           if (delBtn) delBtn.addEventListener("click", () => {
             state.components = state.components.filter((c) => c.id !== comp.id);
             renderRows();
-            renderResults();
           });
         }
       });
@@ -529,20 +643,31 @@
     function renderResults() {
       const result = compute();
 
-      // Gesamtmengen je Zeile
-      result.components.forEach((comp) => {
+      // Gesamtmengen je Zeile (Wert + Einheit)
+      result.comps.forEach((comp) => {
         const row = rowsEl.querySelector(`.calc-row[data-id="${comp.id}"]`);
-        if (row) {
-          const totalInput = row.querySelector(".comp-total");
-          if (totalInput) totalInput.value = formatNumber(comp.totalAmountL);
+        if (!row) return;
+        const totalInput = row.querySelector(".comp-total");
+        if (totalInput) {
+          totalInput.value = comp.total === null ? "" : `${fmt(comp.total, comp.decimals)} ${comp.unitLabel}`;
         }
       });
 
-      totalOverallEl.textContent = formatNumber(result.totalAmountOverallL) || "0,00";
+      summaryLabelEl.textContent = result.bufferApplied
+        ? `Gesamt-Füllmenge (inkl. ${nf0.format(result.bufferL)} L Puffer):`
+        : "Gesamt-Füllmenge:";
+      totalOverallEl.textContent = fmt(result.liquidTotalL, 0) || "0";
       limitWarningEl.style.display = result.limitReached ? "flex" : "none";
 
-      // Tankfüllungen
+      // Füllungen / Spritzen
       fillingsEl.innerHTML = "";
+      if (result.solidsOnly) {
+        const note = document.createElement("div");
+        note.className = "info-note";
+        note.textContent = "Keine Flüssigkeit (Wasser oder Mittel in L/ml) angegeben – ohne Füllmenge ist keine Aufteilung auf Spritzen möglich.";
+        fillingsEl.appendChild(note);
+        return;
+      }
       result.fillings.forEach((filling) => {
         const el = document.createElement("div");
         el.className = "filling-row";
@@ -551,16 +676,16 @@
             (c) => `
             <div class="filling-row__comp">
               <span class="filling-row__comp-label">${escapeHtml(c.name)}</span>
-              <span class="filling-row__comp-value">${formatNumber(c.amountL)} L</span>
+              <span class="filling-row__comp-value">${fmt(c.amount, c.decimals)} ${escapeHtml(c.unitLabel)}</span>
             </div>`
           )
           .join("");
         el.innerHTML = `
           <div class="filling-row__info">
-            <span class="filling-row__index">${filling.index}. Tank</span>
+            <span class="filling-row__index">${filling.index}. Spritze</span>
             <div class="filling-row__badge">
               <span class="filling-row__badge-label">Füllmenge (L)</span>
-              <span class="filling-row__badge-value">${formatNumber(filling.totalFillingAmountL)} L</span>
+              <span class="filling-row__badge-value">${fmt(filling.fuellmengeL, 0)} L</span>
             </div>
           </div>
           <div class="filling-row__components">${comps}</div>`;
@@ -701,13 +826,23 @@
       tankCapacityInput.value = state.tankCapacityL === null ? "" : String(state.tankCapacityL);
     });
     tankCapacityInput.addEventListener("blur", () => {
-      tankCapacityInput.value = state.tankCapacityL === null ? "" : intFmt.format(state.tankCapacityL);
+      tankCapacityInput.value = state.tankCapacityL === null ? "" : nf0.format(state.tankCapacityL);
+    });
+
+    const bufferInput = document.getElementById("buffer");
+    bufferInput.addEventListener("input", () => {
+      const v = bufferInput.value.trim();
+      state.bufferL = v === "" ? null : Math.max(0, Number.parseFloat(v));
+      if (Number.isNaN(state.bufferL)) state.bufferL = null;
+      renderResults();
     });
 
     document.getElementById("addBtn").addEventListener("click", () => {
-      state.components.push({ id: uid(), name: "", registrationNumber: "", authEndDate: null, applicationRateLha: null });
+      state.components.push({ id: uid(), isWater: false, name: "", unit: "L", rate: null, registrationNumber: "", authEndDate: null });
       renderRows();
     });
+
+    document.getElementById("printBtn").addEventListener("click", () => window.print());
 
     // ===== Start =====
     renderRows();
