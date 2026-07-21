@@ -1,8 +1,9 @@
-# PSM-Rechner
+# Agrar Assistent
 
-Ein eigenständiger **Pflanzenschutzmittel-Rechner** für die Feld- und Tankplanung –
+**Agrar Assistent** – Hilfstools für die digitale Landwirtschaft. Aktuell enthalten ist der
+**PSM-Rechner** (Pflanzenschutzmittel-Rechner) für die Feld- und Tankplanung – er
 berechnet die benötigten Gesamtmengen und die Aufteilung auf einzelne Spritzenfüllungen
-(Tank-Splitting) mit ausgeglichenem Mischverhältnis.
+(Tank-Splitting) mit ausgeglichenem Mischverhältnis. Weitere Tools folgen (als Tabs).
 
 Die Anwendung ist eine **einzige HTML-Datei**. Sie läuft im Browser – kein Server,
 keine Installation, keine Anmeldung, kein Cloud-Konto.

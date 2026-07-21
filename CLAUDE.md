@@ -1,10 +1,11 @@
-# PSM-Rechner – Claude Project Guidelines
+# Agrar Assistent – Claude Project Guidelines
 
 ## Was ist das?
-Ein **eigenständiger, lokaler Pflanzenschutzmittel-Rechner** als **einzelne HTML-Datei**
-(`index.html`). Er läuft ohne Server, ohne Build, ohne Anmeldung direkt im Browser.
-Auslieferung an den Endnutzer erfolgt über dieses GitHub-Repo (Datei-Download bzw.
-GitHub Pages).
+**Agrar Assistent** – Hilfstools für die digitale Landwirtschaft, aktuell der
+**PSM-Rechner** (Pflanzenschutzmittel-Rechner) als **einzelne HTML-Datei** (`index.html`).
+Läuft ohne Server, ohne Build, ohne Anmeldung direkt im Browser. Auslieferung über dieses
+GitHub-Repo (GitHub Pages / Datei-Download); später kommen weitere Tools als Tabs in der
+Kopfzeile dazu.
 
 ## Sprache
 - **Chat/Kommunikation:** Deutsch.
