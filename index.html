@@ -121,7 +121,7 @@
 
     /* Aufwandmenge + Einheit nebeneinander */
     .rate-wrap { display: flex; gap: var(--spacing-xs); align-items: stretch; }
-    .rate-wrap .comp-rate { flex: 1 1 auto; min-width: 0; }
+    .rate-wrap input { flex: 1 1 auto; min-width: 0; }
     .rate-wrap select { flex: 0 0 auto; width: auto; padding-left: var(--spacing-xs); padding-right: var(--spacing-xs); cursor: pointer; }
     .rate-wrap .unit-fixed { flex: 0 0 auto; width: auto; display: flex; align-items: center; color: var(--mat-sys-on-surface-variant); }
 
@@ -316,16 +316,25 @@
         <div class="input-section">
           <div class="grid-inputs">
             <div class="field">
-              <label for="fieldSize">Größe des Feldes (ha)</label>
-              <input id="fieldSize" type="number" step="0.01" min="0" class="text-right" inputmode="decimal" />
+              <label for="fieldSize">Größe des Feldes</label>
+              <div class="rate-wrap">
+                <input id="fieldSize" type="number" step="0.01" min="0" class="text-right" inputmode="decimal" />
+                <span class="unit-fixed">ha</span>
+              </div>
             </div>
             <div class="field">
-              <label for="tankCapacity">Tankkapazität der Maschine (L)</label>
-              <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
+              <label for="tankCapacity">Tankkapazität der Maschine</label>
+              <div class="rate-wrap">
+                <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
+                <span class="unit-fixed">L</span>
+              </div>
             </div>
             <div class="field">
-              <label for="buffer">Puffer / Tankreserve (L)</label>
-              <input id="buffer" type="number" step="1" min="0" class="text-right" inputmode="numeric" placeholder="0" />
+              <label for="buffer">Puffer / Tankreserve</label>
+              <div class="rate-wrap">
+                <input id="buffer" type="number" step="1" min="0" class="text-right" inputmode="numeric" placeholder="0" />
+                <span class="unit-fixed">L</span>
+              </div>
             </div>
           </div>
 
@@ -394,6 +403,9 @@
       { code: "Tab", label: "Tabletten", liquidPerUnit: 0 },
     ];
     const UNIT_BY_CODE = Object.fromEntries(UNITS.map((u) => [u.code, u]));
+    // BVL-Aufwandeinheit-Codes (Kodeliste 25) -> unsere Einheiten.
+    const BVL_UNIT_MAP = { LH: "L", CH: "ml", KH: "kg", GH: "g", SH: "Stk", TH: "Tab" };
+    const awgUnitCache = new Map();
 
     const nf0 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const nf2 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -435,8 +447,8 @@
       tankCapacityL: null,
       bufferL: null,
       components: [
-        { id: WATER_ID, isWater: true, name: "Wasser", unit: "L", rate: null, registrationNumber: "", authEndDate: null },
-        { id: uid(), isWater: false, name: "", unit: "L", rate: null, registrationNumber: "", authEndDate: null },
+        { id: WATER_ID, isWater: true, name: "Wasser", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null },
+        { id: uid(), isWater: false, name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null },
       ],
     };
 
@@ -534,6 +546,84 @@
       return UNITS.map((u) => `<option value="${u.code}"${u.code === selected ? " selected" : ""}>${escapeHtml(u.label)}/ha</option>`).join("");
     }
 
+    // Aufwandmengen-Feld: Einheit fix bei Wasser bzw. eindeutigem BVL-Mittel, sonst Dropdown.
+    function rateFieldHtml(comp) {
+      const rateInput = `<input type="number" step="0.01" min="0" class="comp-rate text-right"
+                     inputmode="decimal" aria-label="Aufwandmenge pro ha" value="${comp.rate ?? ""}" />`;
+      if (comp.isWater) {
+        return `<div class="rate-wrap">${rateInput}<span class="unit-fixed">L/ha</span></div>`;
+      }
+      if (comp.unitFixed) {
+        const u = UNIT_BY_CODE[comp.unit] || UNIT_BY_CODE.L;
+        return `<div class="rate-wrap">${rateInput}<span class="unit-fixed">${escapeHtml(u.label)}/ha</span></div>`;
+      }
+      return `<div class="rate-wrap">${rateInput}<select class="comp-unit" aria-label="Einheit">${unitOptions(comp.unit)}</select></div>`;
+    }
+
+    function wireRateField(rateField, comp) {
+      const rateInput = rateField.querySelector(".comp-rate");
+      rateInput.addEventListener("input", () => {
+        const v = rateInput.value.trim();
+        comp.rate = v === "" ? null : Number.parseFloat(v);
+        if (Number.isNaN(comp.rate)) comp.rate = null;
+        renderResults();
+      });
+      const unitSel = rateField.querySelector(".comp-unit");
+      if (unitSel) unitSel.addEventListener("change", () => { comp.unit = unitSel.value; renderResults(); });
+    }
+
+    function reRenderRateField(comp) {
+      const row = rowsEl.querySelector(`.calc-row[data-id="${comp.id}"]`);
+      const rf = row ? row.querySelector(".rate-field") : null;
+      // Nicht neu rendern, während der Nutzer gerade im Mengenfeld tippt.
+      if (!rf || rf.querySelector(".comp-rate") === document.activeElement) return;
+      rf.innerHTML = rateFieldHtml(comp);
+      wireRateField(rf, comp);
+    }
+
+    function applyResolvedUnit(comp, resolved) {
+      comp.unit = resolved.unit;
+      comp.unitFixed = resolved.unitFixed;
+      reRenderRateField(comp);
+      renderResults();
+    }
+
+    // Einheit eines BVL-Mittels bestimmen: eine eindeutige Aufwandeinheit -> fix, mehrere -> Dropdown.
+    async function resolveProductUnit(comp) {
+      const kennr = comp.registrationNumber;
+      if (!kennr || IS_FILE) return;
+      if (awgUnitCache.has(kennr)) { applyResolvedUnit(comp, awgUnitCache.get(kennr)); return; }
+      const ctrl = new AbortController();
+      const timeoutId = setTimeout(() => ctrl.abort(), 8000);
+      try {
+        const q = encodeURIComponent(JSON.stringify({ KENNR: kennr }));
+        const res = await fetch(`${BVL_BASE}/awg/?q=${q}&limit=500`, { signal: ctrl.signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const counts = {};
+        (data.items || []).forEach((it) => {
+          const mapped = BVL_UNIT_MAP[it.aufwand_pro_jahr_einheit];
+          if (mapped) counts[mapped] = (counts[mapped] || 0) + 1;
+        });
+        const distinct = Object.keys(counts);
+        let resolved = null;
+        if (distinct.length === 1) {
+          resolved = { unit: distinct[0], unitFixed: true };
+        } else if (distinct.length > 1) {
+          const preferred = distinct.includes("L") ? "L" : distinct.sort((a, b) => counts[b] - counts[a])[0];
+          resolved = { unit: preferred, unitFixed: false };
+        }
+        if (resolved) {
+          awgUnitCache.set(kennr, resolved);
+          if (comp.registrationNumber === kennr) applyResolvedUnit(comp, resolved);
+        }
+      } catch (err) {
+        // offline/Timeout/file:// -> Dropdown bleibt
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
     // ===== Rendern der Komponentenzeilen (nur bei add/remove) =====
     function renderRows() {
       const multi = state.components.length > 1;
@@ -561,22 +651,8 @@
 
         // Aufwandmenge + Einheit
         const rateField = document.createElement("div");
-        rateField.className = "field";
-        if (isWater) {
-          rateField.innerHTML = `
-            <div class="rate-wrap">
-              <input type="number" step="0.01" min="0" class="comp-rate text-right"
-                     inputmode="decimal" aria-label="Wasser-Aufwandmenge (L/ha)" value="${comp.rate ?? ""}" />
-              <span class="unit-fixed">L/ha</span>
-            </div>`;
-        } else {
-          rateField.innerHTML = `
-            <div class="rate-wrap">
-              <input type="number" step="0.01" min="0" class="comp-rate text-right"
-                     inputmode="decimal" aria-label="Aufwandmenge pro ha" value="${comp.rate ?? ""}" />
-              <select class="comp-unit" aria-label="Einheit">${unitOptions(comp.unit)}</select>
-            </div>`;
-        }
+        rateField.className = "field rate-field";
+        rateField.innerHTML = rateFieldHtml(comp);
 
         // Gesamtmenge (readonly)
         const totalField = document.createElement("div");
@@ -594,16 +670,7 @@
         rowsEl.appendChild(row);
 
         // Events verdrahten
-        const rateInput = rateField.querySelector(".comp-rate");
-        rateInput.addEventListener("input", () => {
-          const v = rateInput.value.trim();
-          comp.rate = v === "" ? null : Number.parseFloat(v);
-          if (Number.isNaN(comp.rate)) comp.rate = null;
-          renderResults();
-        });
-
-        const unitSel = rateField.querySelector(".comp-unit");
-        if (unitSel) unitSel.addEventListener("change", () => { comp.unit = unitSel.value; renderResults(); });
+        wireRateField(rateField, comp);
 
         if (!isWater) {
           setupAutocomplete(nameField, comp);
@@ -688,7 +755,7 @@
           <div class="filling-row__info">
             <span class="filling-row__index">${filling.index}. Spritze</span>
             <div class="filling-row__badge">
-              <span class="filling-row__badge-label">Füllmenge (L)</span>
+              <span class="filling-row__badge-label">Füllmenge</span>
               <span class="filling-row__badge-value">${fmt(filling.fuellmengeL, 0)} L</span>
             </div>
           </div>
@@ -716,6 +783,7 @@
         updateCompHint(nameField, comp);
         closePanel();
         renderResults();
+        resolveProductUnit(comp);
       }
 
       function renderPanel(options, statusText) {
@@ -781,6 +849,7 @@
         comp.name = input.value;
         comp.registrationNumber = "";
         comp.authEndDate = null;
+        if (comp.unitFixed) { comp.unitFixed = false; reRenderRateField(comp); }
         updateCompHint(nameField, comp);
         renderResults();
 
@@ -846,7 +915,7 @@
     });
 
     document.getElementById("addBtn").addEventListener("click", () => {
-      state.components.push({ id: uid(), isWater: false, name: "", unit: "L", rate: null, registrationNumber: "", authEndDate: null });
+      state.components.push({ id: uid(), isWater: false, name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null });
       renderRows();
     });
 
