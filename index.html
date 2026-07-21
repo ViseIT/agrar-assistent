@@ -147,8 +147,9 @@
       padding: 10px var(--spacing-sm) 10px var(--spacing-xs);
       color: var(--mat-sys-on-surface-variant); background: transparent;
     }
-    /* Einheit in den Komponentenzeilen auf gleiche Breite, damit die Zahlen bündig sind. */
-    .rate-field .rate-wrap select, .rate-field .rate-wrap .unit-fixed { min-width: 4.5em; }
+    /* Einheit in den Komponentenzeilen: feste, gleiche Breite → Zahlen bündig. Feste Breite
+       verhindert das Aufblähen der nativen Select-Box auf die breiteste Option. */
+    .rate-field .rate-wrap select, .rate-field .rate-wrap .unit-fixed { flex: 0 0 5em; width: 5em; overflow: hidden; }
 
     /* Komponenten-Tabelle */
     .calc-row-header, .calc-row {
