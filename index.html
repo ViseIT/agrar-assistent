@@ -142,6 +142,8 @@
       padding: 10px var(--spacing-sm) 10px var(--spacing-xs);
       color: var(--mat-sys-on-surface-variant); background: transparent;
     }
+    /* Einheit in den Komponentenzeilen auf gleiche Breite, damit die Zahlen bündig sind. */
+    .rate-field .rate-wrap select, .rate-field .rate-wrap .unit-fixed { min-width: 4.5em; }
 
     /* Komponenten-Tabelle */
     .calc-row-header, .calc-row {
@@ -336,7 +338,7 @@
             <div class="field">
               <label for="fieldSize">Größe des Feldes</label>
               <div class="rate-wrap">
-                <input id="fieldSize" type="number" step="0.01" min="0" class="text-right" inputmode="decimal" />
+                <input id="fieldSize" type="text" inputmode="decimal" autocomplete="off" class="text-right" />
                 <span class="unit-fixed">ha</span>
               </div>
             </div>
@@ -350,7 +352,7 @@
             <div class="field">
               <label for="buffer">Puffer / Tankreserve</label>
               <div class="rate-wrap">
-                <input id="buffer" type="number" step="1" min="0" class="text-right" inputmode="numeric" placeholder="0" />
+                <input id="buffer" type="text" inputmode="numeric" autocomplete="off" class="text-right" placeholder="0" />
                 <span class="unit-fixed">L</span>
               </div>
             </div>
@@ -373,7 +375,7 @@
           </div>
 
           <div class="summary-total-row">
-            <span class="summary-total-row__label" id="summaryLabel">Gesamt-Füllmenge:</span>
+            <span class="summary-total-row__label">Gesamt-Spritzflüssigkeit:</span>
             <span class="summary-total-row__total-value"><span id="totalOverall">0</span> L</span>
           </div>
 
@@ -427,6 +429,7 @@
 
     const nf0 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const nf2 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const nfHa = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
     const dateFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" });
 
     // ===== Rundung: Math.round((v + EPSILON) * f) / f =====
@@ -493,7 +496,6 @@
       const active = comps.filter((c) => c.total !== null && c.total > 0);
       const liquidTotalL = round(active.reduce((sum, c) => sum + c.liquidL, 0), 0);
       const hasLiquid = liquidTotalL > 0;
-      const bufferApplied = bufferL > 0 && tc > 0 && hasLiquid;
       // < 1 L nutzbare Kapazität (auch bei fraktionalem Puffer) gilt als "Puffer zu groß".
       const bufferTooLarge = tc > 0 && bufferL > 0 && effectiveCap < 1;
 
@@ -533,9 +535,6 @@
         comps,
         liquidTotalL,
         hasLiquid,
-        bufferApplied,
-        bufferL,
-        effectiveCap,
         bufferTooLarge,
         solidsOnly: !hasLiquid && active.length > 0,
         fillings,
@@ -548,7 +547,6 @@
     const rowHeaderEl = document.getElementById("rowHeader");
     const fillingsEl = document.getElementById("fillings");
     const totalOverallEl = document.getElementById("totalOverall");
-    const summaryLabelEl = document.getElementById("summaryLabel");
     const limitWarningEl = document.getElementById("limitWarning");
 
     function svgIcon(path) {
@@ -751,12 +749,6 @@
         fillingsEl.appendChild(note);
         return;
       }
-      if (result.bufferApplied && result.fillings.length) {
-        const note = document.createElement("div");
-        note.className = "info-note";
-        note.textContent = `Je Spritze werden höchstens ${nf0.format(result.effectiveCap)} L gefüllt (${nf0.format(result.bufferL)} L Reserve im Tank).`;
-        fillingsEl.appendChild(note);
-      }
       result.fillings.forEach((filling) => {
         const el = document.createElement("div");
         el.className = "filling-row";
@@ -898,39 +890,37 @@
     // ===== Top-Level-Eingaben =====
     const fieldSizeInput = document.getElementById("fieldSize");
     const tankCapacityInput = document.getElementById("tankCapacity");
-    fieldSizeInput.addEventListener("input", () => {
-      const v = fieldSizeInput.value.trim();
-      state.fieldSizeHa = v === "" ? null : Math.max(0, Number.parseFloat(v));
-      if (Number.isNaN(state.fieldSizeHa)) state.fieldSizeHa = null;
-      renderResults();
-    });
-    // Tankkapazität als Ganzzahl mit Tausender-Trennzeichen anzeigen (Text-Input erlaubt Gruppierung)
-    function parseGroupedInt(str) {
-      const digits = str.replace(/\D/g, "");
-      return digits === "" ? null : Number.parseInt(digits, 10);
-    }
-    tankCapacityInput.addEventListener("input", () => {
-      state.tankCapacityL = parseGroupedInt(tankCapacityInput.value);
-      renderResults();
-    });
-    tankCapacityInput.addEventListener("focus", () => {
-      tankCapacityInput.value = state.tankCapacityL === null ? "" : String(state.tankCapacityL);
-    });
-    tankCapacityInput.addEventListener("blur", () => {
-      tankCapacityInput.value = state.tankCapacityL === null ? "" : nf0.format(state.tankCapacityL);
-    });
-
     const bufferInput = document.getElementById("buffer");
-    bufferInput.addEventListener("input", () => {
-      const v = bufferInput.value.trim();
-      // Puffer sind ganze Liter (analog zur Tankkapazität) – auf Ganzzahl normalisieren.
-      const parsed = v === "" ? null : Math.floor(Number.parseFloat(v));
-      state.bufferL = parsed === null || Number.isNaN(parsed) ? null : Math.max(0, parsed);
-      renderResults();
-    });
-    bufferInput.addEventListener("blur", () => {
-      bufferInput.value = state.bufferL === null ? "" : String(state.bufferL);
-    });
+
+    // Einheitliche Zahlenfelder: Text-Input (keine Spinner), Buchstaben werden sofort entfernt,
+    // Anzeige mit Tausendertrennung, beim Editieren ohne Trennzeichen.
+    function setupNumericField(input, decimals, get, set) {
+      input.addEventListener("input", () => {
+        const cleaned = decimals
+          ? input.value.replace(/[^\d,]/g, "").replace(/,(?=.*,)/g, "")
+          : input.value.replace(/\D/g, "");
+        if (cleaned !== input.value) input.value = cleaned;
+        let num = null;
+        if (cleaned !== "") {
+          num = decimals ? Number.parseFloat(cleaned.replace(",", ".")) : Number.parseInt(cleaned, 10);
+          num = Number.isNaN(num) ? null : Math.max(0, num);
+        }
+        set(num);
+        renderResults();
+      });
+      input.addEventListener("focus", () => {
+        const v = get();
+        input.value = v === null || v === undefined ? "" : String(v).replace(".", ",");
+      });
+      input.addEventListener("blur", () => {
+        const v = get();
+        input.value = v === null || v === undefined ? "" : (decimals ? nfHa.format(v) : nf0.format(v));
+      });
+    }
+
+    setupNumericField(fieldSizeInput, true, () => state.fieldSizeHa, (n) => { state.fieldSizeHa = n; });
+    setupNumericField(tankCapacityInput, false, () => state.tankCapacityL, (n) => { state.tankCapacityL = n; });
+    setupNumericField(bufferInput, false, () => state.bufferL, (n) => { state.bufferL = n; });
 
     document.getElementById("addBtn").addEventListener("click", () => {
       state.components.push({ id: uid(), isWater: false, name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null });
