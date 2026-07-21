@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PSM-Rechner</title>
   <meta name="description" content="PSM-Rechner: Gesamtmengen und Füllmengen je Spritze berechnen, mit Mittelsuche über die BVL-Zulassungsdaten. Läuft im Browser, ohne Server." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ff9900' d='M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z'/%3E%3C/svg%3E" />
+  <link rel="icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+CiAgPHBhdGggZmlsbD0iI2ZmOTkwMCIgc3Ryb2tlPSIjZmY5OTAwIiBzdHJva2Utd2lkdGg9IjAuNSIKICAgICAgICBkPSJNIDIzLjA0LDExLjA0IEMgMjMuMDQsMTEuMDQgNS43MCwxMS4wNCA1LjcwLDExLjA0IDUuMTUsMTEuMDQgNC44MSwxMC43MiA0LjgwLDEwLjE3IDQuODAsMTAuMTcgNC44MCw4LjA2IDQuODAsOC4wNiA0LjgxLDcuNTUgNS4xMCw3LjIwIDUuNjIsNy4yMCA1LjYyLDcuMjAgNDEuMTMsNy4yMCA0MS4xMyw3LjIwIDQxLjEzLDcuMjAgNDIuMDIsNy4yMCA0Mi4wMiw3LjIwIDQyLjQxLDcuMjAgNDIuODAsNy4xNSA0My4wNSw3LjUyIDQzLjEwLDcuNTkgNDMuMTQsNy42OCA0My4xNyw3Ljc2IDQzLjIwLDcuODYgNDMuMjAsNy45NCA0My4yMCw4LjA0IDQzLjIwLDguMDQgNDMuMjAsMTAuMjIgNDMuMjAsMTAuMjIgNDMuMTksMTAuNzEgNDIuODQsMTEuMDQgNDIuMzUsMTEuMDQgNDIuMzUsMTEuMDQgMjQuOTYsMTEuMDQgMjQuOTYsMTEuMDQgMjQuOTYsMTEuMDQgMjQuOTYsMTguMjYgMjQuOTYsMTguMjYgMjQuOTYsMTguMjYgMjQuNDcsMTguMjMgMjQuNDcsMTguMjMgMjQuNDcsMTguMjMgMjMuMDQsMTguMjMgMjMuMDQsMTguMjMgMjMuMDQsMTguMjMgMjMuMDQsMTEuMDQgMjMuMDQsMTEuMDQgWiBNIDYuNzMsMTIuNDcgQyA2LjgxLDEyLjU2IDYuOTgsMTIuODYgNy4wNiwxMi45OCA3LjA2LDEyLjk4IDcuODYsMTQuMzIgNy44NiwxNC4zMiA4LjEzLDE0Ljc4IDguNTEsMTUuNTMgOC42MSwxNi4wNSA4LjY1LDE2LjIyIDguNjUsMTYuMzggOC42NSwxNi41NSA4LjY1LDE2LjcyIDguNjAsMTYuOTIgOC41NCwxNy4wOSA4LjAzLDE4LjUwIDUuODgsMTguNjYgNS4wOSwxNy40MSA0LjYzLDE2LjcxIDQuNzgsMTYuMDIgNS4xMCwxNS4zMCA1LjEwLDE1LjMwIDUuMzQsMTQuNzkgNS4zNCwxNC43OSA1Ljc2LDEzLjk5IDYuMjQsMTMuMjIgNi43MywxMi40NyBaIE0gMTIuNDIsMTIuNDcgQyAxMi41MSwxMi41NCAxMi42MCwxMi44NCAxMi42NCwxMi45NiAxMi42NCwxMi45NiAxMy4xOCwxNC4xMSAxMy4xOCwxNC4xMSAxMy4xOCwxNC4xMSAxMy42NSwxNC45OCAxMy42NSwxNC45OCAxNC4wNCwxNS42OSAxNC40NSwxNi4zOSAxNC42OCwxNy4xOCAxNC43NiwxNy40NSAxNC44NCwxNy43MyAxNC44NCwxOC4wMiAxNC44MywxOC4zNSAxNC43MiwxOC42OSAxNC41NywxOC45OCAxNC40OCwxOS4xNSAxNC4zOCwxOS4zMSAxNC4yNSwxOS40NSAxMy44NywxOS44NSAxMy4yMSwyMC4xNiAxMi42NiwyMC4xNiAxMi42NiwyMC4xNiAxMi4yNiwyMC4xNiAxMi4yNiwyMC4xNiAxMS42OSwyMC4xNSAxMS4wMywxOS44NyAxMC42NCwxOS40NSAxMC4yOSwxOS4wOCAxMC4xMCwxOC41NyAxMC4wNywxOC4wNyAxMC4wNywxOC4wNyAxMC4wOCwxNy42NyAxMC4wOCwxNy42NyAxMC4xNCwxNy4yNyAxMC4zNywxNi43MSAxMC41NCwxNi4zNCAxMC44NSwxNS42NiAxMS4yNCwxNS4wMSAxMS41OSwxNC4zNSAxMS41OSwxNC4zNSAxMS44MCwxMy45NyAxMS44MCwxMy45NyAxMS44MCwxMy45NyAxMi4wMywxMy40OCAxMi4wMywxMy40OCAxMi4xNywxMy4xOCAxMi4zNSwxMi43OCAxMi40MiwxMi40NyBaIE0gMzUuNTMsMTIuNDcgQyAzNS42MiwxMi41NCAzNS42OSwxMi44MiAzNS43NCwxMi45NCAzNS43NCwxMi45NCAzNi4yNCwxNC4wNCAzNi4yNCwxNC4wNCAzNi4yNCwxNC4wNCAzNi43NCwxNC45MyAzNi43NCwxNC45MyAzNi43NCwxNC45MyAzNy4xMSwxNS42MSAzNy4xMSwxNS42MSAzNy42NiwxNi42NiAzOC4zNSwxNy45NiAzNy42NCwxOS4xMCAzNy41NCwxOS4yNiAzNy40MywxOS40MSAzNy4yOSwxOS41MyAzNi45MSwxOS44OSAzNi4zMCwyMC4xNiAzNS43NywyMC4xNiAzNS43NywyMC4xNiAzNS4zMiwyMC4xNiAzNS4zMiwyMC4xNiAzNS4xNCwyMC4xNSAzNC45NiwyMC4xMSAzNC43OCwyMC4wNiAzNC4xMiwxOS44NSAzMy42MCwxOS40MiAzMy4zNCwxOC43NyAzMy4yNiwxOC41NiAzMy4xOSwxOC4zMiAzMy4xOSwxOC4wOSAzMy4xOSwxOC4wOSAzMy4xOSwxNy45MyAzMy4xOSwxNy45MyAzMy4xOSwxNy40MSAzMy40OSwxNi42NiAzMy43MiwxNi4yMCAzMy43MiwxNi4yMCAzNC4xNiwxNS4zMyAzNC4xNiwxNS4zMyAzNC4xNiwxNS4zMyAzNS4wMiwxMy43MyAzNS4wMiwxMy43MyAzNS4xNiwxMy40NSAzNS40OSwxMi43NiAzNS41MywxMi40NyBaIE0gNDEuMjcsMTIuNDcgQyA0MS4zNywxMi41NiA0MS41OSwxMi45NCA0MS42NywxMy4wOCA0MS42NywxMy4wOCA0Mi4zNiwxNC4yMyA0Mi4zNiwxNC4yMyA0Mi4zNiwxNC4yMyA0Mi45NiwxNS40MCA0Mi45NiwxNS40MCA0My4wNywxNS42NyA0My4xOSwxNi4wMiA0My4yMCwxNi4zMSA0My4yMCwxNi4zMSA0My4yMCwxNi42MiA0My4yMCwxNi42MiA0My4xOSwxNi43OSA0My4xNSwxNi45MiA0My4wOSwxNy4wOSA0Mi42MiwxOC40NCA0MC42MCwxOC42NSAzOS43NCwxNy41NSAzOS42NSwxNy40NCAzOS41NiwxNy4yOSAzOS41MCwxNy4xNiAzOS4xNSwxNi4zOCAzOS41MSwxNS41OCAzOS44NSwxNC44OCA0MC4xNiwxNC4yNiA0MC41MywxMy42NSA0MC45MCwxMy4wNSA0MC45MCwxMy4wNSA0MS4yNywxMi40NyA0MS4yNywxMi40NyBaIE0gMTguMTYsMTIuNDkgQyAxOC4xNiwxMi40OSAxOC4yMSwxMi40OSAxOC4yMSwxMi40OSAxOC4yMSwxMi40OSAxOC43MywxMy4zNCAxOC43MywxMy4zNCAxOS4wNSwxMy44NiAxOS41OSwxNC43NyAxOS44MSwxNS4zMyAxOS45NCwxNS42NiAyMC4xMiwxNi4xMSAyMC4xMSwxNi40OCAyMC4wOCwxNy4xMCAxOS43NiwxNy42NyAxOS4yMiwxNy45OSAxOC4zMywxOC41MiAxNi45MSwxOC4yNSAxNi40NCwxNy4yNyAxNi4wOCwxNi41NCAxNi4yNywxNS45MSAxNi41OSwxNS4yMSAxNi45NCwxNC40NiAxNy4zNywxMy43NiAxNy44MCwxMy4wNSAxNy44MCwxMy4wNSAxOC4xNiwxMi40OSAxOC4xNiwxMi40OSBaIE0gMjkuODEsMTIuNDkgQyAyOS44MSwxMi40OSAyOS44NiwxMi40OSAyOS44NiwxMi40OSAyOS44NiwxMi40OSAzMC40MiwxMy4zOCAzMC40MiwxMy4zOCAzMC42OCwxMy43OSAzMS4yNywxNC44MyAzMS40NSwxNS4yNiAzMS41OCwxNS41NyAzMS43NSwxNi4wMCAzMS43NiwxNi4zNCAzMS43NiwxNi42OCAzMS43NSwxNi44OCAzMS42MCwxNy4yMCAzMC45MywxOC42NCAyOC42OCwxOC42MSAyOC4wNCwxNy4xMSAyNy45NCwxNi44NyAyNy45MSwxNi42MiAyNy45MSwxNi4zNiAyNy45MiwxNS44OCAyOC4yMywxNS4yMSAyOC40NSwxNC43OSAyOC44NSwxNC4wMiAyOS4zNCwxMy4yMiAyOS44MSwxMi40OSBaIE0gMjEuMTIsMjIuMDggQyAyMS4xMiwyMi4wOCAyMS4xMiwyMC4yMCAyMS4xMiwyMC4yMCAyMS4xMiwxOS42MyAyMS41NSwxOS4yMCAyMi4xMiwxOS4yMCAyMi4xMiwxOS4yMCAyNS44OCwxOS4yMCAyNS44OCwxOS4yMCAyNi40MSwxOS4yMCAyNi44OCwxOS41OCAyNi44OCwyMC4xMyAyNi44OCwyMC4xMyAyNi44OCwyMi4wOCAyNi44OCwyMi4wOCAyNi44OCwyMi4wOCAyOS4wOSwyMi4wOCAyOS4wOSwyMi4wOCAzMC4wMywyMi4wOCAzMC44NiwyMi43OCAzMS4xMiwyMy42NyAzMS4yNSwyNC4xMyAzMS4yMCwzMC42MSAzMS4yMCwzMC42MSAzMS4xOSwzMC44NyAzMS4xMSwzMS4xMyAzMS4wMCwzMS4zNiAzMC43MywzMS45NSAzMC4zNSwzMi4zMCAyOS43NCwzMi41MiAyOS41MCwzMi42MSAyOS4yNSwzMi42NSAyOC45OSwzMi42NSAyOC45OSwzMi42NSAxOS4xMCwzMi42NSAxOS4xMCwzMi42NSAxOC45MSwzMi42NSAxOC41OCwzMi42MiAxOC40MCwzMi41NyAxNy4zMiwzMi4yNCAxNi43OCwzMS4zMiAxNi43OCwzMC4yMyAxNi43OCwzMC4yMyAxNi43OSwyMy45NiAxNi45MSwyMy42MCAxNy4xOSwyMi43MiAxOC4wMywyMi4wOCAxOC45NiwyMi4wOCAxOC45NiwyMi4wOCAyMS4xMiwyMi4wOCAyMS4xMiwyMi4wOCBaIE0gMTUuMzUsMzYuMDAgQyAxNS4zNSwzNi4wMCAxNS4zNSwzOC43MiAxNS4zNSwzOC43MiAxNS4zNSwzOS4zOCAxNS4wMCwzOS45OSAxNC40OCw0MC4zOSAxNC4zNCw0MC41MCAxNC4xNCw0MC42MSAxMy45Nyw0MC42NyAxMy43Niw0MC43NSAxMy41MSw0MC44MCAxMy4yOSw0MC44MCAxMy4yOSw0MC44MCAxMC43MSw0MC44MCAxMC43MSw0MC44MCA5Ljg3LDQwLjgwIDkuMTMsNDAuMjIgOC44MSwzOS40NyA4LjcyLDM5LjI1IDguNjUsMzguOTYgOC42NSwzOC43MiA4LjY1LDM4LjcyIDguNjUsMjkuOTggOC42NSwyOS45OCA4LjY1LDI5LjM0IDkuMDIsMjguNjkgOS41MiwyOC4zMCA5LjY3LDI4LjE4IDkuNzYsMjguMTQgOS45NCwyOC4wNSAxMC4yMCwyNy45MiAxMC40NCwyNy44NCAxMC43MywyNy44NCAxMC43MywyNy44NCAxMy4yNywyNy44NCAxMy4yNywyNy44NCAxMy40OSwyNy44NCAxMy42NCwyNy44OCAxMy44NSwyNy45NSAxNC43NCwyOC4yNSAxNS4zNSwyOS4xMSAxNS4zNSwzMC4wNSAxNS4zNSwzMC4wNSAxNS4zNSwzMy41OSAxNS4zNSwzMy41OSAxNS4zNSwzMy41OSAzMi42NSwzMy41OSAzMi42NSwzMy41OSAzMi42NSwzMy41OSAzMi42NSwyOS45NSAzMi42NSwyOS45NSAzMi42NSwyOS4yOSAzMy4wOCwyOC42MCAzMy42MSwyOC4yMyAzMy43MSwyOC4xNiAzMy44NywyOC4wOCAzMy45OCwyOC4wMiAzNC4xOSwyNy45MyAzNC40NiwyNy44NSAzNC42OSwyNy44NCAzNC42OSwyNy44NCAzNy4yNywyNy44NCAzNy4yNywyNy44NCAzOC4xMCwyNy44NSAzOC45MywyOC41MSAzOS4yMSwyOS4yNyAzOS4zMCwyOS41MSAzOS4zNSwyOS43NSAzOS4zNSwzMC4wMCAzOS4zNSwzMC4wMCAzOS4zNSwzOC43MiAzOS4zNSwzOC43MiAzOS4zNSwzOS44MSAzOC4zOSw0MC44MCAzNy4yOSw0MC44MCAzNy4yOSw0MC44MCAzNC43Myw0MC44MCAzNC43Myw0MC44MCAzNC40OCw0MC44MCAzNC4yMiw0MC43NSAzMy45OCw0MC42NSAzMy4zNyw0MC4zOCAzMi45NywzOS45NCAzMi43NiwzOS4zMCAzMi42OSwzOS4xMCAzMi42NSwzOC45MSAzMi42NSwzOC43MCAzMi42NSwzOC43MCAzMi42NSwzNi4wMCAzMi42NSwzNi4wMCAzMi42NSwzNi4wMCAyNy44NCwzNi4wMCAyNy44NCwzNi4wMCAyNy43OSwzNi42NCAyNy4zMiwzNy4xNyAyNi43MiwzNy4zNyAyNi41NCwzNy40MiAyNi4yOCwzNy40NSAyNi4wOSwzNy40NSAyNi4wOSwzNy40NSAyMS45NiwzNy40NSAyMS45NiwzNy40NSAyMS4wOCwzNy40NSAyMC4yNiwzNi45NCAyMC4xOCwzNi4wMCAyMC4xOCwzNi4wMCAxNS4zNSwzNi4wMCAxNS4zNSwzNi4wMCBaIiAvPgo8L3N2Zz4K" />
   <style>
     /* =====================================================================
        Design-Tokens (Material 3, Seed #FF9900)
@@ -79,7 +79,6 @@
     .app-header__logo svg { width: 24px; height: 24px; }
     .app-header__titles { display: flex; flex-direction: column; }
     .app-header__title { font-size: var(--font-xl); font-weight: var(--font-weight-semibold); line-height: 1.1; }
-    .app-header .secondary-button { margin-left: auto; }
 
     /* Karte */
     .card {
@@ -89,9 +88,8 @@
       box-shadow: var(--mat-sys-level1);
       padding: var(--spacing-l);
     }
-
-    .calculator-layout { display: flex; flex-direction: column; gap: var(--spacing-m); }
-    .input-section { display: flex; flex-direction: column; gap: var(--spacing-s); }
+    .stack { display: flex; flex-direction: column; gap: var(--spacing-m); }
+    .print-row { display: flex; justify-content: flex-end; }
 
     .grid-inputs {
       display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -185,7 +183,7 @@
     .icon-button:hover { background: color-mix(in srgb, var(--mat-sys-error) 12%, transparent); }
     .icon-button svg { width: 20px; height: 20px; }
 
-    .add-comp-container { display: flex; justify-content: flex-start; margin: var(--spacing-m) 0; }
+    .add-comp-container { display: flex; justify-content: flex-end; margin: var(--spacing-m) 0; }
     .primary-button {
       display: inline-flex; align-items: center; gap: var(--spacing-s);
       background: var(--mat-sys-primary); color: var(--mat-sys-on-primary);
@@ -249,8 +247,6 @@
       padding: var(--spacing-sm) var(--spacing-m); color: var(--mat-sys-on-surface-variant);
       font-size: var(--font-s);
     }
-
-    .section-divider { border: none; border-top: 1px solid var(--mat-sys-outline-variant); margin: var(--spacing-s) 0; }
 
     /* Füllungen / Spritzen */
     .fillings-list { display: flex; flex-direction: column; gap: var(--spacing-sm); }
@@ -334,78 +330,78 @@
   <div class="page">
     <header class="app-header">
       <div class="app-header__logo" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12z"/></svg>
+        <svg viewBox="0 0 48 48"><path fill="currentColor" stroke="currentColor" stroke-width="0.5" d="M 23.04,11.04 C 23.04,11.04 5.70,11.04 5.70,11.04 5.15,11.04 4.81,10.72 4.80,10.17 4.80,10.17 4.80,8.06 4.80,8.06 4.81,7.55 5.10,7.20 5.62,7.20 5.62,7.20 41.13,7.20 41.13,7.20 41.13,7.20 42.02,7.20 42.02,7.20 42.41,7.20 42.80,7.15 43.05,7.52 43.10,7.59 43.14,7.68 43.17,7.76 43.20,7.86 43.20,7.94 43.20,8.04 43.20,8.04 43.20,10.22 43.20,10.22 43.19,10.71 42.84,11.04 42.35,11.04 42.35,11.04 24.96,11.04 24.96,11.04 24.96,11.04 24.96,18.26 24.96,18.26 24.96,18.26 24.47,18.23 24.47,18.23 24.47,18.23 23.04,18.23 23.04,18.23 23.04,18.23 23.04,11.04 23.04,11.04 Z M 6.73,12.47 C 6.81,12.56 6.98,12.86 7.06,12.98 7.06,12.98 7.86,14.32 7.86,14.32 8.13,14.78 8.51,15.53 8.61,16.05 8.65,16.22 8.65,16.38 8.65,16.55 8.65,16.72 8.60,16.92 8.54,17.09 8.03,18.50 5.88,18.66 5.09,17.41 4.63,16.71 4.78,16.02 5.10,15.30 5.10,15.30 5.34,14.79 5.34,14.79 5.76,13.99 6.24,13.22 6.73,12.47 Z M 12.42,12.47 C 12.51,12.54 12.60,12.84 12.64,12.96 12.64,12.96 13.18,14.11 13.18,14.11 13.18,14.11 13.65,14.98 13.65,14.98 14.04,15.69 14.45,16.39 14.68,17.18 14.76,17.45 14.84,17.73 14.84,18.02 14.83,18.35 14.72,18.69 14.57,18.98 14.48,19.15 14.38,19.31 14.25,19.45 13.87,19.85 13.21,20.16 12.66,20.16 12.66,20.16 12.26,20.16 12.26,20.16 11.69,20.15 11.03,19.87 10.64,19.45 10.29,19.08 10.10,18.57 10.07,18.07 10.07,18.07 10.08,17.67 10.08,17.67 10.14,17.27 10.37,16.71 10.54,16.34 10.85,15.66 11.24,15.01 11.59,14.35 11.59,14.35 11.80,13.97 11.80,13.97 11.80,13.97 12.03,13.48 12.03,13.48 12.17,13.18 12.35,12.78 12.42,12.47 Z M 35.53,12.47 C 35.62,12.54 35.69,12.82 35.74,12.94 35.74,12.94 36.24,14.04 36.24,14.04 36.24,14.04 36.74,14.93 36.74,14.93 36.74,14.93 37.11,15.61 37.11,15.61 37.66,16.66 38.35,17.96 37.64,19.10 37.54,19.26 37.43,19.41 37.29,19.53 36.91,19.89 36.30,20.16 35.77,20.16 35.77,20.16 35.32,20.16 35.32,20.16 35.14,20.15 34.96,20.11 34.78,20.06 34.12,19.85 33.60,19.42 33.34,18.77 33.26,18.56 33.19,18.32 33.19,18.09 33.19,18.09 33.19,17.93 33.19,17.93 33.19,17.41 33.49,16.66 33.72,16.20 33.72,16.20 34.16,15.33 34.16,15.33 34.16,15.33 35.02,13.73 35.02,13.73 35.16,13.45 35.49,12.76 35.53,12.47 Z M 41.27,12.47 C 41.37,12.56 41.59,12.94 41.67,13.08 41.67,13.08 42.36,14.23 42.36,14.23 42.36,14.23 42.96,15.40 42.96,15.40 43.07,15.67 43.19,16.02 43.20,16.31 43.20,16.31 43.20,16.62 43.20,16.62 43.19,16.79 43.15,16.92 43.09,17.09 42.62,18.44 40.60,18.65 39.74,17.55 39.65,17.44 39.56,17.29 39.50,17.16 39.15,16.38 39.51,15.58 39.85,14.88 40.16,14.26 40.53,13.65 40.90,13.05 40.90,13.05 41.27,12.47 41.27,12.47 Z M 18.16,12.49 C 18.16,12.49 18.21,12.49 18.21,12.49 18.21,12.49 18.73,13.34 18.73,13.34 19.05,13.86 19.59,14.77 19.81,15.33 19.94,15.66 20.12,16.11 20.11,16.48 20.08,17.10 19.76,17.67 19.22,17.99 18.33,18.52 16.91,18.25 16.44,17.27 16.08,16.54 16.27,15.91 16.59,15.21 16.94,14.46 17.37,13.76 17.80,13.05 17.80,13.05 18.16,12.49 18.16,12.49 Z M 29.81,12.49 C 29.81,12.49 29.86,12.49 29.86,12.49 29.86,12.49 30.42,13.38 30.42,13.38 30.68,13.79 31.27,14.83 31.45,15.26 31.58,15.57 31.75,16.00 31.76,16.34 31.76,16.68 31.75,16.88 31.60,17.20 30.93,18.64 28.68,18.61 28.04,17.11 27.94,16.87 27.91,16.62 27.91,16.36 27.92,15.88 28.23,15.21 28.45,14.79 28.85,14.02 29.34,13.22 29.81,12.49 Z M 21.12,22.08 C 21.12,22.08 21.12,20.20 21.12,20.20 21.12,19.63 21.55,19.20 22.12,19.20 22.12,19.20 25.88,19.20 25.88,19.20 26.41,19.20 26.88,19.58 26.88,20.13 26.88,20.13 26.88,22.08 26.88,22.08 26.88,22.08 29.09,22.08 29.09,22.08 30.03,22.08 30.86,22.78 31.12,23.67 31.25,24.13 31.20,30.61 31.20,30.61 31.19,30.87 31.11,31.13 31.00,31.36 30.73,31.95 30.35,32.30 29.74,32.52 29.50,32.61 29.25,32.65 28.99,32.65 28.99,32.65 19.10,32.65 19.10,32.65 18.91,32.65 18.58,32.62 18.40,32.57 17.32,32.24 16.78,31.32 16.78,30.23 16.78,30.23 16.79,23.96 16.91,23.60 17.19,22.72 18.03,22.08 18.96,22.08 18.96,22.08 21.12,22.08 21.12,22.08 Z M 15.35,36.00 C 15.35,36.00 15.35,38.72 15.35,38.72 15.35,39.38 15.00,39.99 14.48,40.39 14.34,40.50 14.14,40.61 13.97,40.67 13.76,40.75 13.51,40.80 13.29,40.80 13.29,40.80 10.71,40.80 10.71,40.80 9.87,40.80 9.13,40.22 8.81,39.47 8.72,39.25 8.65,38.96 8.65,38.72 8.65,38.72 8.65,29.98 8.65,29.98 8.65,29.34 9.02,28.69 9.52,28.30 9.67,28.18 9.76,28.14 9.94,28.05 10.20,27.92 10.44,27.84 10.73,27.84 10.73,27.84 13.27,27.84 13.27,27.84 13.49,27.84 13.64,27.88 13.85,27.95 14.74,28.25 15.35,29.11 15.35,30.05 15.35,30.05 15.35,33.59 15.35,33.59 15.35,33.59 32.65,33.59 32.65,33.59 32.65,33.59 32.65,29.95 32.65,29.95 32.65,29.29 33.08,28.60 33.61,28.23 33.71,28.16 33.87,28.08 33.98,28.02 34.19,27.93 34.46,27.85 34.69,27.84 34.69,27.84 37.27,27.84 37.27,27.84 38.10,27.85 38.93,28.51 39.21,29.27 39.30,29.51 39.35,29.75 39.35,30.00 39.35,30.00 39.35,38.72 39.35,38.72 39.35,39.81 38.39,40.80 37.29,40.80 37.29,40.80 34.73,40.80 34.73,40.80 34.48,40.80 34.22,40.75 33.98,40.65 33.37,40.38 32.97,39.94 32.76,39.30 32.69,39.10 32.65,38.91 32.65,38.70 32.65,38.70 32.65,36.00 32.65,36.00 32.65,36.00 27.84,36.00 27.84,36.00 27.79,36.64 27.32,37.17 26.72,37.37 26.54,37.42 26.28,37.45 26.09,37.45 26.09,37.45 21.96,37.45 21.96,37.45 21.08,37.45 20.26,36.94 20.18,36.00 20.18,36.00 15.35,36.00 15.35,36.00 Z"/></svg>
       </div>
       <div class="app-header__titles">
         <span class="app-header__title">PSM-Rechner</span>
       </div>
-      <button type="button" class="secondary-button no-print" id="printBtn" title="Drucken oder als PDF speichern">
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
-        <span>Drucken</span>
-      </button>
     </header>
 
-    <main class="card">
-      <div class="calculator-layout">
-        <div class="input-section">
-          <div class="grid-inputs">
-            <div class="field">
-              <label for="fieldSize">Größe des Feldes</label>
-              <div class="rate-wrap">
-                <input id="fieldSize" type="text" inputmode="decimal" autocomplete="off" class="text-right" />
-                <span class="unit-fixed">ha</span>
-              </div>
-            </div>
-            <div class="field">
-              <label for="tankCapacity">Tankkapazität der Maschine</label>
-              <div class="rate-wrap">
-                <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
-                <span class="unit-fixed">L</span>
-              </div>
-            </div>
-            <div class="field">
-              <label for="buffer">Puffer / Tankreserve</label>
-              <div class="rate-wrap">
-                <input id="buffer" type="text" inputmode="numeric" autocomplete="off" class="text-right" placeholder="0" />
-                <span class="unit-fixed">L</span>
-              </div>
+    <div class="stack">
+      <section class="card">
+        <div class="grid-inputs">
+          <div class="field">
+            <label for="fieldSize">Größe des Feldes</label>
+            <div class="rate-wrap">
+              <input id="fieldSize" type="text" inputmode="decimal" autocomplete="off" class="text-right" />
+              <span class="unit-fixed">ha</span>
             </div>
           </div>
-
-          <div class="calc-row-header" id="rowHeader">
-            <span>Komponente</span>
-            <span class="header-label header-label--rate">Aufwandmenge (pro ha)</span>
-            <span class="header-label header-label--total">Gesamtmenge</span>
-            <span></span>
+          <div class="field">
+            <label for="tankCapacity">Tankkapazität der Maschine</label>
+            <div class="rate-wrap">
+              <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
+              <span class="unit-fixed">L</span>
+            </div>
           </div>
-
-          <div id="rows"></div>
-
-          <div class="add-comp-container no-print">
-            <button type="button" class="primary-button" id="addBtn">
-              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
-              <span>Komponente hinzufügen</span>
-            </button>
-          </div>
-
-          <div class="summary-total-row">
-            <span class="summary-total-row__label">Gesamt-Spritzflüssigkeit:</span>
-            <span class="summary-total-row__total-value"><span id="totalOverall">0</span> L</span>
-          </div>
-
-          <div class="limit-warning" id="limitWarning" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
-            <span>Das Limit von 20 Füllungen wurde erreicht. Weitere Füllungen werden nicht berechnet.</span>
+          <div class="field">
+            <label for="buffer">Puffer / Tankreserve</label>
+            <div class="rate-wrap">
+              <input id="buffer" type="text" inputmode="numeric" autocomplete="off" class="text-right" placeholder="0" />
+              <span class="unit-fixed">L</span>
+            </div>
           </div>
         </div>
+      </section>
 
-        <hr class="section-divider" />
-
-        <div class="fillings-section">
-          <div class="fillings-list" id="fillings"></div>
+      <section class="card">
+        <div class="calc-row-header" id="rowHeader">
+          <span>Komponente</span>
+          <span class="header-label header-label--rate">Aufwandmenge (pro ha)</span>
+          <span class="header-label header-label--total">Gesamtmenge</span>
+          <span></span>
         </div>
+
+        <div id="rows"></div>
+
+        <div class="add-comp-container no-print">
+          <button type="button" class="primary-button" id="addBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+            <span>Komponente hinzufügen</span>
+          </button>
+        </div>
+
+        <div class="summary-total-row">
+          <span class="summary-total-row__label">Gesamt-Spritzflüssigkeit:</span>
+          <span class="summary-total-row__total-value"><span id="totalOverall">0</span> L</span>
+        </div>
+      </section>
+
+      <section class="card" id="cardResult" style="display: none;">
+        <div class="limit-warning" id="limitWarning" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+          <span>Das Limit von 20 Füllungen wurde erreicht. Weitere Füllungen werden nicht berechnet.</span>
+        </div>
+        <div class="fillings-list" id="fillings"></div>
+      </section>
+
+      <div class="print-row no-print" id="printRow" style="display: none;">
+        <button type="button" class="secondary-button" id="printBtn" title="Drucken oder als PDF speichern">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+          <span>Drucken</span>
+        </button>
       </div>
-    </main>
+    </div>
 
     <footer class="app-footer">
       <p>
@@ -562,6 +558,8 @@
     const fillingsEl = document.getElementById("fillings");
     const totalOverallEl = document.getElementById("totalOverall");
     const limitWarningEl = document.getElementById("limitWarning");
+    const cardResultEl = document.getElementById("cardResult");
+    const printRowEl = document.getElementById("printRow");
 
     function svgIcon(path) {
       return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="${path}"/></svg>`;
@@ -745,6 +743,12 @@
       });
 
       totalOverallEl.textContent = fmt(result.liquidTotalL, 0) || "0";
+
+      // Ergebnis-Card nur zeigen, wenn es etwas anzuzeigen gibt; Drucken nur bei echter Aufteilung.
+      const hasResult = result.fillings.length > 0 || result.bufferTooLarge || result.solidsOnly;
+      cardResultEl.style.display = hasResult ? "" : "none";
+      printRowEl.style.display = result.fillings.length > 0 ? "" : "none";
+
       limitWarningEl.style.display = result.limitReached ? "flex" : "none";
 
       // Füllungen / Spritzen
