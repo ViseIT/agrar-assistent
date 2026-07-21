@@ -53,3 +53,13 @@ herunterzuladen.
 
 Angaben ohne Gewähr und ohne Rechtsberatung. Maßgeblich sind stets die amtliche
 Zulassung und das Produktetikett. Datenquelle der Mitteldaten: BVL (PSM-Zulassungs-API).
+
+## Lizenz
+
+Der Quellcode dieses Repositorys steht unter der **PolyForm Strict License 1.0.0**
+(siehe [`LICENSE`](LICENSE)). Das bedeutet insbesondere: **keine Weitergabe, keine
+Änderungen/Ableitungen und keine kommerzielle Nutzung** ohne ausdrückliche
+Genehmigung; nichtkommerzielle Nutzung ist gestattet.
+
+Die eingebettete Schrift **Inter** ist davon ausgenommen und separat unter der
+**SIL Open Font License 1.1** lizenziert – siehe [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
