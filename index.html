@@ -324,7 +324,7 @@
               <input id="tankCapacity" type="text" inputmode="numeric" autocomplete="off" class="text-right" />
             </div>
             <div class="field">
-              <label for="buffer">Puffer (L, optional)</label>
+              <label for="buffer">Puffer / Tankreserve (L)</label>
               <input id="buffer" type="number" step="1" min="0" class="text-right" inputmode="numeric" placeholder="0" />
             </div>
           </div>
@@ -447,42 +447,34 @@
       const fs = Math.max(0, state.fieldSizeHa ?? 0);
       const tc = Math.max(0, state.tankCapacityL ?? 0);
       const bufferL = Math.max(0, state.bufferL ?? 0);
+      // Puffer = Tankreserve: je Spritze wird höchstens bis (Tankkapazität − Puffer) gefüllt.
+      // Die Gesamtmenge bleibt exakt; der Puffer bleibt als Reserve im Tank ungefüllt.
+      const effectiveCap = Math.max(0, tc - bufferL);
 
-      // Rohmengen (ungerundet) + Basis-Liquid für den Pufferfaktor
-      const raw = state.components.map((c) => {
+      const comps = state.components.map((c) => {
         const unit = UNIT_BY_CODE[c.unit] || UNIT_BY_CODE.L;
+        const decimals = decimalsFor(c);
         const hasName = c.isWater || !!c.name;
-        const rawTotal = hasName && c.rate !== null ? fs * c.rate : null;
-        return { comp: c, unit, rawTotal };
-      });
-      // Puffer (absolute Liter) wirkt auf die ganze Mischung: alles proportional so hochskalieren,
-      // dass die flüssige Füllmenge um bufferL steigt (Konzentration/Dosierung bleibt gleich).
-      const liquidBase = raw.reduce(
-        (sum, r) => sum + (r.rawTotal !== null && r.rawTotal > 0 ? r.rawTotal * r.unit.liquidPerUnit : 0),
-        0
-      );
-      const factor = liquidBase > 0 && bufferL > 0 ? (liquidBase + bufferL) / liquidBase : 1;
-
-      const comps = raw.map(({ comp, unit, rawTotal }) => {
-        const decimals = decimalsFor(comp);
-        const total = rawTotal !== null ? round(rawTotal * factor, decimals) : null;
+        const total = hasName && c.rate !== null ? round(fs * c.rate, decimals) : null;
         const liquidL = total !== null ? total * unit.liquidPerUnit : 0;
-        return { ...comp, unitLabel: unit.label, decimals, total, liquidL };
+        return { ...c, unitLabel: unit.label, decimals, total, liquidL };
       });
 
       const active = comps.filter((c) => c.total !== null && c.total > 0);
       const liquidTotalL = round(active.reduce((sum, c) => sum + c.liquidL, 0), 0);
       const hasLiquid = liquidTotalL > 0;
-      const bufferApplied = factor > 1;
+      const bufferApplied = bufferL > 0 && tc > 0 && hasLiquid;
+      // < 1 L nutzbare Kapazität (auch bei fraktionalem Puffer) gilt als "Puffer zu groß".
+      const bufferTooLarge = tc > 0 && bufferL > 0 && effectiveCap < 1;
 
       const fillings = [];
       let limitReached = false;
-      if (tc > 0 && hasLiquid) {
+      if (effectiveCap >= 1 && hasLiquid) {
         let remaining = liquidTotalL;
         let idx = 1;
         while (remaining > 0) {
           if (idx > 20) { limitReached = true; break; }
-          const fuellmengeL = round(Math.min(remaining, tc), 0);
+          const fuellmengeL = round(Math.min(remaining, effectiveCap), 0);
           const ratio = fuellmengeL / liquidTotalL;
           const components = active.map((c) => ({
             name: c.isWater ? "Wasser" : c.name,
@@ -513,6 +505,8 @@
         hasLiquid,
         bufferApplied,
         bufferL,
+        effectiveCap,
+        bufferTooLarge,
         solidsOnly: !hasLiquid && active.length > 0,
         fillings,
         limitReached,
@@ -653,20 +647,30 @@
         }
       });
 
-      summaryLabelEl.textContent = result.bufferApplied
-        ? `Gesamt-Füllmenge (inkl. ${nf0.format(result.bufferL)} L Puffer):`
-        : "Gesamt-Füllmenge:";
       totalOverallEl.textContent = fmt(result.liquidTotalL, 0) || "0";
       limitWarningEl.style.display = result.limitReached ? "flex" : "none";
 
       // Füllungen / Spritzen
       fillingsEl.innerHTML = "";
+      if (result.bufferTooLarge) {
+        const note = document.createElement("div");
+        note.className = "limit-warning";
+        note.innerHTML = `${svgIcon("M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z")}<span>Der Puffer ist so groß wie die Tankkapazität oder größer – bitte einen kleineren Puffer wählen.</span>`;
+        fillingsEl.appendChild(note);
+        return;
+      }
       if (result.solidsOnly) {
         const note = document.createElement("div");
         note.className = "info-note";
         note.textContent = "Keine Flüssigkeit (Wasser oder Mittel in L/ml) angegeben – ohne Füllmenge ist keine Aufteilung auf Spritzen möglich.";
         fillingsEl.appendChild(note);
         return;
+      }
+      if (result.bufferApplied && result.fillings.length) {
+        const note = document.createElement("div");
+        note.className = "info-note";
+        note.textContent = `Je Spritze werden höchstens ${nf0.format(result.effectiveCap)} L gefüllt (${nf0.format(result.bufferL)} L Reserve im Tank).`;
+        fillingsEl.appendChild(note);
       }
       result.fillings.forEach((filling) => {
         const el = document.createElement("div");
@@ -832,9 +836,13 @@
     const bufferInput = document.getElementById("buffer");
     bufferInput.addEventListener("input", () => {
       const v = bufferInput.value.trim();
-      state.bufferL = v === "" ? null : Math.max(0, Number.parseFloat(v));
-      if (Number.isNaN(state.bufferL)) state.bufferL = null;
+      // Puffer sind ganze Liter (analog zur Tankkapazität) – auf Ganzzahl normalisieren.
+      const parsed = v === "" ? null : Math.floor(Number.parseFloat(v));
+      state.bufferL = parsed === null || Number.isNaN(parsed) ? null : Math.max(0, parsed);
       renderResults();
+    });
+    bufferInput.addEventListener("blur", () => {
+      bufferInput.value = state.bufferL === null ? "" : String(state.bufferL);
     });
 
     document.getElementById("addBtn").addEventListener("click", () => {
