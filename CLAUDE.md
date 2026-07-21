@@ -23,6 +23,14 @@ Kopfzeile dazu.
   CSS-Variablen `--mat-sys-*` im `:root`. Ausnahme: der `@media print`-Block nutzt bewusst
   feste helle Druckfarben (Papier ist hell) – kein Verstoß gegen die Token-Regel.
 - **Icons als inline-SVG** (keine Icon-Fonts).
+- **Schrift:** `Inter Variable` ist als **Base64-`@font-face` eingebettet** (Subset
+  `latin`, dieselbe Datei wie die Legacy-Website via `@fontsource-variable/inter`).
+  Bewusst **kein Font-CDN** – kein Fremd-Datenabfluss (DSGVO), wie beim Legacy selbst
+  gehostet. System-Fallback (`Segoe UI`/`system-ui`) bleibt.
+- **Kopfzeile = Topbar** im Website-Look (`agrar-assistent.de`): volle Breite,
+  `#434343`-Bar, Logo + orange „Agrar Assistent", orange 4-px-Akzentlinie, rechts Tabs
+  `PSM-Rechner` (aktiv) + `PSM-Katalog` (Platzhalter „bald"). Weitere Tools kommen als
+  zusätzliche Tabs dazu. Im Druck (`@media print`) hell, ohne Tabs/Bar.
 
 ## Rechenlogik (`compute()`)
 - Je Komponente eine **Einheit** (`UNITS`: L, ml, kg, g, Stück, Tabletten). Gesamtmenge =
