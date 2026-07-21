@@ -24,9 +24,9 @@ Kopfzeile dazu.
   feste helle Druckfarben (Papier ist hell) – kein Verstoß gegen die Token-Regel.
 - **Icons als inline-SVG** (keine Icon-Fonts).
 - **Schrift:** `Inter Variable` ist als **Base64-`@font-face` eingebettet** (Subset
-  `latin`, dieselbe Datei wie die Legacy-Website via `@fontsource-variable/inter`).
-  Bewusst **kein Font-CDN** – kein Fremd-Datenabfluss (DSGVO), wie beim Legacy selbst
-  gehostet. System-Fallback (`Segoe UI`/`system-ui`) bleibt.
+  `latin`, Quelle `@fontsource-variable/inter`). Bewusst **kein Font-CDN** – die Schrift
+  ist selbst gehostet (hier direkt eingebettet), also kein Fremd-Datenabfluss (DSGVO).
+  System-Fallback (`Segoe UI`/`system-ui`) bleibt.
 - **Kopfzeile = Topbar** im Website-Look (`agrar-assistent.de`): volle Breite, dunkelgraue Bar
   (`--mat-sys-surface-container`, #262626; bewusst dunkler als die Website-Navbar), Logo + orange „Agrar Assistent",
   orange 2-px-Akzentlinie, rechts Tabs mit inline-SVG-Icon `Pflanzenschutzmittel-Rechner`
