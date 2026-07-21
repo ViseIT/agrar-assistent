@@ -2,7 +2,7 @@
 
 ## Was ist das?
 **Agrar Assistent** – Hilfstools für die digitale Landwirtschaft, aktuell der
-**PSM-Rechner** (Pflanzenschutzmittel-Rechner) als **einzelne HTML-Datei** (`index.html`).
+**Pflanzenschutzmittel-Rechner** als **einzelne HTML-Datei** (`index.html`).
 Läuft ohne Server, ohne Build, ohne Anmeldung direkt im Browser. Auslieferung über dieses
 GitHub-Repo (GitHub Pages / Datei-Download); später kommen weitere Tools als Tabs in der
 Kopfzeile dazu.
@@ -27,10 +27,12 @@ Kopfzeile dazu.
   `latin`, dieselbe Datei wie die Legacy-Website via `@fontsource-variable/inter`).
   Bewusst **kein Font-CDN** – kein Fremd-Datenabfluss (DSGVO), wie beim Legacy selbst
   gehostet. System-Fallback (`Segoe UI`/`system-ui`) bleibt.
-- **Kopfzeile = Topbar** im Website-Look (`agrar-assistent.de`): volle Breite,
-  `#434343`-Bar, Logo + orange „Agrar Assistent", orange 4-px-Akzentlinie, rechts Tabs
-  `PSM-Rechner` (aktiv) + `PSM-Katalog` (Platzhalter „bald"). Weitere Tools kommen als
-  zusätzliche Tabs dazu. Im Druck (`@media print`) hell, ohne Tabs/Bar.
+- **Kopfzeile = Topbar** im Website-Look (`agrar-assistent.de`): volle Breite, dunkelgraue Bar
+  (`--mat-sys-surface-container`, #262626; bewusst dunkler als die Website-Navbar), Logo + orange „Agrar Assistent",
+  orange 2-px-Akzentlinie, rechts Tabs mit inline-SVG-Icon `Pflanzenschutzmittel-Rechner`
+  (aktiv) + `Pflanzenschutzmittel-Katalog` (klickbar, Inhalt noch leer). Ein Tab-Klick
+  schaltet per JS (`switchView`) zwischen `#viewRechner` und `#viewKatalog` um. Weitere Tools
+  kommen als zusätzliche Tabs dazu. Im Druck (`@media print`) hell, ohne Tabs/Bar.
 
 ## Rechenlogik (`compute()`)
 - Je Komponente eine **Einheit** (`UNITS`: L, ml, kg, g, Stück, Tabletten). Gesamtmenge =
