@@ -130,26 +130,33 @@
       border-bottom-color: var(--mat-sys-primary);
       box-shadow: inset 0 -1px 0 0 var(--mat-sys-primary);
     }
-    .rate-wrap input, .rate-wrap select { background-color: transparent; border: none; border-radius: 0; }
-    .rate-wrap input:focus, .rate-wrap select:focus { border: none; padding-bottom: 10px; }
-    .rate-wrap input { flex: 1 1 auto; min-width: 0; padding-right: var(--spacing-xs); }
-    .rate-wrap select {
-      flex: 0 0 auto; width: auto; font: inherit; cursor: pointer;
-      color: var(--mat-sys-on-surface); padding: 10px 1.4em 10px 0; outline: none;
-      appearance: none; -webkit-appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23e7e1df' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
-      background-repeat: no-repeat; background-position: right 2px center;
+    .rate-wrap input {
+      background-color: transparent; border: none; border-radius: 0;
+      flex: 1 1 auto; min-width: 0; padding-right: var(--spacing-xs);
     }
-    .rate-wrap select option { background-color: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface); }
-    .rate-wrap select option:checked { background-color: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
+    .rate-wrap input:focus { border: none; padding-bottom: 10px; }
     .rate-wrap .unit-fixed {
       flex: 0 0 auto; width: auto; display: flex; align-items: center; font: inherit;
       padding: 10px var(--spacing-sm) 10px var(--spacing-xs);
       color: var(--mat-sys-on-surface-variant); background: transparent;
     }
-    /* Einheit in den Komponentenzeilen: feste, gleiche Breite → Zahlen bündig. Feste Breite
-       verhindert das Aufblähen der nativen Select-Box auf die breiteste Option. */
-    .rate-field .rate-wrap select, .rate-field .rate-wrap .unit-fixed { flex: 0 0 5em; width: 5em; overflow: hidden; }
+
+    /* Änderbare Einheit: eigenes Feld neben der Menge (kein gemeinsamer Kasten). */
+    .rate-split { display: flex; gap: var(--spacing-xs); align-items: stretch; }
+    .rate-split input { flex: 1 1 auto; min-width: 0; }
+    .rate-split select {
+      flex: 0 0 auto; font: inherit; cursor: pointer; color: var(--mat-sys-on-surface);
+      background-color: var(--mat-sys-surface-container-highest);
+      border: none; border-bottom: 1px solid var(--mat-sys-outline);
+      border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
+      padding: 10px 1.6em 10px var(--spacing-sm); outline: none;
+      appearance: none; -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23e7e1df' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right var(--spacing-s) center;
+    }
+    .rate-split select:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
+    .rate-split select option { background-color: var(--mat-sys-surface-container); color: var(--mat-sys-on-surface); }
+    .rate-split select option:checked { background-color: var(--mat-sys-primary-container); color: var(--mat-sys-on-primary-container); }
 
     /* Komponenten-Tabelle */
     .calc-row-header, .calc-row {
@@ -314,7 +321,8 @@
       .filling-row__index, .field__hint { color: #000000; }
       .field input { background: #ffffff; color: #000000; border-bottom: 1px solid #999999; }
       .rate-wrap { background: #ffffff; border-bottom: 1px solid #999999; }
-      .rate-wrap input, .rate-wrap select, .rate-wrap .unit-fixed { background: transparent; color: #000000; border: none; }
+      .rate-wrap input, .rate-wrap .unit-fixed { background: transparent; color: #000000; border: none; }
+      .rate-split select { background: #ffffff; color: #000000; border: none; border-bottom: 1px solid #999999; }
       .summary-total-row, .filling-row, .filling-row__components { background: #ffffff; border-color: #999999; }
       .filling-row__info { background: #eeeeee; color: #000000; border-color: #ff9900; }
       .filling-row__badge, .summary-total-row__total-value { color: #b35c00; }
@@ -579,7 +587,7 @@
         const u = UNIT_BY_CODE[comp.unit] || UNIT_BY_CODE.L;
         return `<div class="rate-wrap">${rateInput}<span class="unit-fixed">${escapeHtml(u.label)}/ha</span></div>`;
       }
-      return `<div class="rate-wrap">${rateInput}<select class="comp-unit" aria-label="Einheit">${unitOptions(comp.unit)}</select></div>`;
+      return `<div class="rate-split">${rateInput}<select class="comp-unit" aria-label="Einheit">${unitOptions(comp.unit)}</select></div>`;
     }
 
     function wireRateField(rateField, comp) {
