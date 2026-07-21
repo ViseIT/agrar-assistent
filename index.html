@@ -318,6 +318,8 @@
       .summary-total-row, .filling-row, .filling-row__components { background: #ffffff; border-color: #999999; }
       .filling-row__info { background: #eeeeee; color: #000000; border-color: #ff9900; }
       .filling-row__badge, .summary-total-row__total-value { color: #b35c00; }
+      /* Jede Spritz-Card zusammenhalten – kein Seitenumbruch innerhalb einer Füllung. */
+      .filling-row { break-inside: avoid; page-break-inside: avoid; }
       .app-footer a { color: #000000; }
     }
   </style>
