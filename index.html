@@ -104,14 +104,14 @@
       font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant);
       margin-bottom: var(--spacing-xxs);
     }
-    .field input, .rate-wrap select, .rate-wrap .unit-fixed {
+    .field input {
       width: 100%; font: inherit; color: var(--mat-sys-on-surface);
       background: var(--mat-sys-surface-container-highest);
       border: none; border-bottom: 1px solid var(--mat-sys-outline);
       border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
       padding: 10px var(--spacing-sm); outline: none;
     }
-    .field input:focus, .rate-wrap select:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
+    .field input:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
     .field input:read-only { color: var(--mat-sys-on-surface-variant); }
     .field input.invalid { border-bottom-color: var(--mat-sys-error); }
     .text-right { text-align: right; }
@@ -119,11 +119,29 @@
     .field__hint { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-top: var(--spacing-xxs); }
     .field__hint.expired { color: var(--mat-sys-error); font-weight: var(--font-weight-medium); }
 
-    /* Aufwandmenge + Einheit nebeneinander */
-    .rate-wrap { display: flex; gap: var(--spacing-xs); align-items: stretch; }
-    .rate-wrap input { flex: 1 1 auto; min-width: 0; }
-    .rate-wrap select { flex: 0 0 auto; width: auto; padding-left: var(--spacing-xs); padding-right: var(--spacing-xs); cursor: pointer; }
-    .rate-wrap .unit-fixed { flex: 0 0 auto; width: auto; display: flex; align-items: center; color: var(--mat-sys-on-surface-variant); }
+    /* Input + Einheit als EIN Feld: .rate-wrap ist der Kasten, die Kinder sind transparent. */
+    .rate-wrap {
+      display: flex; align-items: stretch;
+      background: var(--mat-sys-surface-container-highest);
+      border-bottom: 1px solid var(--mat-sys-outline);
+      border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
+    }
+    .rate-wrap:focus-within {
+      border-bottom-color: var(--mat-sys-primary);
+      box-shadow: inset 0 -1px 0 0 var(--mat-sys-primary);
+    }
+    .rate-wrap input, .rate-wrap select { background: transparent; border: none; border-radius: 0; }
+    .rate-wrap input:focus, .rate-wrap select:focus { border: none; padding-bottom: 10px; }
+    .rate-wrap input { flex: 1 1 auto; min-width: 0; padding-right: var(--spacing-xs); }
+    .rate-wrap select {
+      flex: 0 0 auto; width: auto; font: inherit; cursor: pointer;
+      color: var(--mat-sys-on-surface); padding: 10px var(--spacing-s) 10px 0; outline: none;
+    }
+    .rate-wrap .unit-fixed {
+      flex: 0 0 auto; width: auto; display: flex; align-items: center; font: inherit;
+      padding: 10px var(--spacing-sm) 10px var(--spacing-xs);
+      color: var(--mat-sys-on-surface-variant); background: transparent;
+    }
 
     /* Komponenten-Tabelle */
     .calc-row-header, .calc-row {
@@ -286,9 +304,9 @@
       .app-header__title, .app-footer, .field > label, .calc-row-header,
       .summary-total-row__label, .filling-row__comp-label, .filling-row__comp-value,
       .filling-row__index, .field__hint { color: #000000; }
-      .field input, .rate-wrap select, .rate-wrap .unit-fixed {
-        background: #ffffff; color: #000000; border-bottom: 1px solid #999999;
-      }
+      .field input { background: #ffffff; color: #000000; border-bottom: 1px solid #999999; }
+      .rate-wrap { background: #ffffff; border-bottom: 1px solid #999999; }
+      .rate-wrap input, .rate-wrap select, .rate-wrap .unit-fixed { background: transparent; color: #000000; border: none; }
       .summary-total-row, .filling-row, .filling-row__components { background: #ffffff; border-color: #999999; }
       .filling-row__info { background: #eeeeee; color: #000000; border-color: #ff9900; }
       .filling-row__badge, .summary-total-row__total-value { color: #b35c00; }
