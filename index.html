@@ -419,6 +419,7 @@
     .result-row { background: var(--mat-sys-surface-container-high); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: var(--spacing-m); display: flex; gap: var(--spacing-m); align-items: center; justify-content: space-between; }
     .result-row--click { cursor: pointer; }
     .result-row--click:hover { background: var(--mat-sys-surface-container-highest); }
+    .result-row--selected { border-color: var(--mat-sys-primary); box-shadow: 0 0 0 1px var(--mat-sys-primary); }
     button.result-row { width: 100%; text-align: left; font: inherit; color: inherit; }
     .result-row--click:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
     .result-row__main { min-width: 0; flex: 1 1 auto; }
@@ -1112,15 +1113,29 @@
     let modalAbort = null;
     let searchTimer = null;
     let modalTargetId = null;
+    let selectedAwgId = null;
+    let selectedZusatzKennr = null;
 
     function openModal() {
       modalEl.hidden = false;
       document.body.style.overflow = "hidden";
+      selectedAwgId = null; selectedZusatzKennr = null;
       mSearch.value = ""; setModalMode("products"); setModalType("psm");
       showIdleState();
       setTimeout(() => mSearch.focus(), 30);
     }
-    function openModalFor(comp) { modalTargetId = comp.id; openModal(); }
+    function openModalFor(comp) {
+      modalTargetId = comp.id;
+      openModal();
+      if (comp.app && comp.registrationNumber) {
+        selectedAwgId = comp.app.awgId || null;
+        mSearch.value = comp.name;
+        openProduct({ mittelname: comp.name, kennr: comp.registrationNumber, zul_ende: comp.authEndDate });
+      } else if (comp.isZusatz && comp.name) {
+        selectedZusatzKennr = comp.registrationNumber || null;
+        setModalType("zusatz"); mSearch.value = comp.name; runSearch(comp.name.trim());
+      }
+    }
     function closeModal() {
       if (modalAbort) modalAbort.abort();
       modalEl.hidden = true;
@@ -1229,6 +1244,7 @@
     // ----- Suche (Produkte bzw. Zusatzstoffe) -----
     async function runSearch(term) {
       if (IS_FILE) { showIdleState(); return; }
+      if (!term || term.trim().length < 2) { showIdleState(); return; }
       if (modalAbort) modalAbort.abort();
       modalAbort = new AbortController();
       const ctrl = modalAbort;
@@ -1255,7 +1271,7 @@
     }
 
     function renderProducts(products) {
-      setModalMode("products");
+      setModalMode("products"); selectedAwgId = null;
       if (!products.length) { renderStatus("Keine Treffer."); return; }
       mResults.innerHTML = "";
       products.forEach((p) => {
@@ -1358,8 +1374,9 @@
         const rate = a.mAufwand != null ? fmt(a.mAufwand, Number.isInteger(a.mAufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[a.mEinheit] || a.mEinheit || "") : "–";
         const water = a.wVon != null ? fmt(a.wVon, 0) + (a.wBis != null && a.wBis !== a.wVon ? "–" + fmt(a.wBis, 0) : "") + " " + (BVL_UNIT_LABEL[a.wEinheit] || "l/ha") : "–";
         const bbch = bbchLabel(a);
+        const isSel = !!(selectedAwgId && a.awgId === selectedAwgId);
         const row = document.createElement("div");
-        row.className = "result-row";
+        row.className = "result-row" + (isSel ? " result-row--selected" : "");
         row.innerHTML =
           '<div class="result-row__main">' +
           '<div class="app-grid">' +
@@ -1370,10 +1387,11 @@
           "<span><b>Wasser:</b> " + escapeHtml(water) + "</span>" +
           "<span><b>BBCH:</b> " + escapeHtml(bbch) + "</span>" +
           "</div></div>" +
-          '<div class="result-row__action"><button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
-        row.querySelector("button").addEventListener("click", () => selectApplication(currentProduct, a));
+          '<div class="result-row__action"><button type="button" class="primary-button primary-button--sm">' + (isSel ? "Abwählen" : "Auswählen") + '</button></div>';
+        row.querySelector("button").addEventListener("click", () => isSel ? deselectTarget() : selectApplication(currentProduct, a));
         mResults.appendChild(row);
       });
+      if (selectedAwgId) { const sel = mResults.querySelector(".result-row--selected"); if (sel) sel.scrollIntoView({ block: "center" }); }
     }
 
     function renderZusatz(list) {
@@ -1381,14 +1399,15 @@
       if (!list.length) { renderStatus("Keine Treffer."); return; }
       mResults.innerHTML = "";
       list.forEach((z) => {
+        const isSel = !!(selectedZusatzKennr && z.kennr === selectedZusatzKennr);
         const row = document.createElement("div");
-        row.className = "result-row";
+        row.className = "result-row" + (isSel ? " result-row--selected" : "");
         row.innerHTML =
           '<div class="result-row__main"><div class="result-row__name">' + escapeHtml(z.mittelname) + "</div>" +
           '<div class="result-row__meta' + (isExpired(z.genehmigungsende) ? " expired" : "") + '">Zusatzstoff · Kennr. ' + escapeHtml(z.kennr || "–") +
           (z.genehmigungsende ? " · gültig bis " + escapeHtml(formatBvlDate(z.genehmigungsende)) : "") + "</div></div>" +
-          '<div class="result-row__action">' + statusBadge(z.genehmigungsende) + '<button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
-        row.querySelector("button").addEventListener("click", () => selectZusatz(z));
+          '<div class="result-row__action">' + statusBadge(z.genehmigungsende) + '<button type="button" class="primary-button primary-button--sm">' + (isSel ? "Abwählen" : "Auswählen") + '</button></div>';
+        row.querySelector("button").addEventListener("click", () => isSel ? deselectTarget() : selectZusatz(z));
         mResults.appendChild(row);
       });
     }
@@ -1400,6 +1419,10 @@
       Object.assign(comp, patch);
       renderRows(); closeModal();
     }
+    // Abwählen: Ziel-Komponente leeren (zurück auf "Anwendung wählen").
+    function deselectTarget() {
+      fillTarget({ name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null, isZusatz: false, app: null });
+    }
     function selectApplication(product, app) {
       const unit = BVL_UNIT_MAP[app.mEinheit] || "L";
       fillTarget({
@@ -1408,6 +1431,7 @@
         registrationNumber: product.kennr || "", authEndDate: product.zul_ende || null,
         isZusatz: false,
         app: {
+          awgId: app.awgId || null,
           kulturen: app.kulturen || [], schadorgs: app.schadorgs || [],
           bbchVon: app.bbchVon || null, bbchBis: app.bbchBis || null,
           approvedRate: app.mAufwand != null ? app.mAufwand : null, approvedUnit: unit,
@@ -1433,6 +1457,7 @@
     document.querySelectorAll(".modal__tab").forEach((t) => t.addEventListener("click", () => setModalType(t.dataset.mtype)));
     mSearch.addEventListener("input", () => {
       const term = mSearch.value.trim();
+      selectedAwgId = null; selectedZusatzKennr = null;
       clearTimeout(searchTimer);
       setModalMode("products");
       if (IS_FILE) { showIdleState(); return; }
