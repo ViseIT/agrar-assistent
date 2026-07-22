@@ -830,6 +830,10 @@
         nameField.className = "field";
         if (isWater) {
           nameField.innerHTML = `<input type="text" value="Wasser" readonly aria-label="Komponente (Wasser)" />`;
+        } else if (comp.fromModal) {
+          nameField.innerHTML = `
+            <input type="text" class="comp-name" value="${escapeHtml(comp.name)}" readonly aria-label="Komponente" />
+            <div class="field__hint comp-hint"></div>`;
         } else {
           nameField.innerHTML = `
             <input type="text" class="comp-name" placeholder="Bitte wählen" autocomplete="off"
@@ -862,7 +866,7 @@
         wireRateField(rateField, comp);
 
         if (!isWater) {
-          setupAutocomplete(nameField, comp);
+          if (!comp.fromModal) setupAutocomplete(nameField, comp);
           updateCompHint(nameField, comp);
           const delBtn = delCol.querySelector(".comp-delete");
           if (delBtn) delBtn.addEventListener("click", () => {
@@ -878,15 +882,20 @@
     function updateCompHint(nameField, comp) {
       const hint = nameField.querySelector(".comp-hint");
       if (!hint) return;
-      if (comp.registrationNumber) {
-        const validTxt = comp.authEndDate ? " · gültig bis " + formatBvlDate(comp.authEndDate) : "";
-        const expired = isExpired(comp.authEndDate);
-        hint.textContent = "Zul.-Nr. " + comp.registrationNumber + validTxt + (expired ? " (abgelaufen)" : "");
-        hint.classList.toggle("expired", expired);
-      } else {
-        hint.textContent = "";
-        hint.classList.remove("expired");
+      const parts = [];
+      if (comp.app) {
+        if (comp.app.kulturen && comp.app.kulturen.length) parts.push(comp.app.kulturen.join(", "));
+        if (comp.app.schadorgs && comp.app.schadorgs.length) parts.push(comp.app.schadorgs.join(", "));
+        if (comp.app.bbchVon || comp.app.bbchBis) parts.push("BBCH " + (comp.app.bbchVon || "?") + "–" + (comp.app.bbchBis || "?"));
       }
+      const expired = isExpired(comp.authEndDate);
+      if (comp.registrationNumber) {
+        const label = comp.isZusatz ? "Zusatzstoff · Kennr. " : "Zul.-Nr. ";
+        const validTxt = comp.authEndDate ? " · gültig bis " + formatBvlDate(comp.authEndDate) : "";
+        parts.push(label + comp.registrationNumber + validTxt + (expired ? " (abgelaufen)" : ""));
+      }
+      hint.textContent = parts.join(" · ");
+      hint.classList.toggle("expired", expired && !!comp.registrationNumber);
     }
 
     // ===== Ergebnis rendern (bei jeder Eingabe) =====
@@ -1377,9 +1386,32 @@
       });
     }
 
-    // Etappe 2 füllt diese Übernahme in den Rechner. Etappe 1: nur schließen (Platzhalter).
-    function selectApplication(product, app) { console.log("[Etappe 2] Anwendung übernehmen:", product.mittelname, app); closeModal(); }
-    function selectZusatz(z) { console.log("[Etappe 2] Zusatzstoff übernehmen:", z.mittelname); closeModal(); }
+    // Übernimmt eine gewählte Anwendung als Komponente in den Rechner (Etappe 2).
+    function selectApplication(product, app) {
+      const unit = BVL_UNIT_MAP[app.mEinheit] || "L";
+      state.components.push({
+        id: uid(), isWater: false, fromModal: true,
+        name: product.mittelname, unit: unit,
+        rate: app.mAufwand != null ? app.mAufwand : null, unitFixed: true,
+        registrationNumber: product.kennr || "", authEndDate: product.zul_ende || null,
+        app: {
+          kulturen: app.kulturen || [], schadorgs: app.schadorgs || [],
+          bbchVon: app.bbchVon || null, bbchBis: app.bbchBis || null,
+          approvedRate: app.mAufwand != null ? app.mAufwand : null, approvedUnit: unit,
+          wVon: app.wVon != null ? app.wVon : null, wBis: app.wBis != null ? app.wBis : null, wEinheit: app.wEinheit || null,
+        },
+      });
+      renderRows(); closeModal();
+    }
+    // Übernimmt einen Zusatzstoff als Komponente (freie Menge, keine BVL-Dosis).
+    function selectZusatz(z) {
+      state.components.push({
+        id: uid(), isWater: false, fromModal: true, isZusatz: true,
+        name: z.mittelname, unit: "L", rate: null, unitFixed: false,
+        registrationNumber: z.kennr || "", authEndDate: z.genehmigungsende || null,
+      });
+      renderRows(); closeModal();
+    }
 
     // ----- Verdrahtung -----
     document.getElementById("openSelectBtn").addEventListener("click", openModal);
