@@ -387,6 +387,47 @@
       .topbar__name { color: #b35c00; }
       .topbar__nav, .topbar__accent { display: none; }
     }
+    /* ===== Auswahl-Modal: Mittel & Anwendung (Etappe 1) ===== */
+    .modal-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 4vh var(--spacing-m); background: rgba(0, 0, 0, 0.62); overflow-y: auto; }
+    .modal-overlay[hidden] { display: none; }
+    .modal { width: 100%; max-width: 960px; margin: auto; background: var(--mat-sys-surface-container-highest); border-radius: var(--mat-sys-corner-large); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; max-height: 92vh; }
+    .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-m); padding: var(--spacing-m) var(--spacing-l); }
+    .modal__head h2 { margin: 0; font-size: var(--font-xl); font-weight: var(--font-weight-semibold); }
+    .modal__head .icon-button svg { width: 22px; height: 22px; }
+    .modal__tabs { display: flex; gap: var(--spacing-l); padding: 0 var(--spacing-l); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .modal__tab { background: none; border: none; color: var(--mat-sys-on-surface-variant); font: inherit; padding: var(--spacing-s) 2px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .modal__tab:hover { color: var(--mat-sys-on-surface); }
+    .modal__tab--active { color: var(--mat-sys-primary); border-bottom-color: var(--mat-sys-primary); font-weight: var(--font-weight-semibold); }
+    .modal__filters { display: flex; flex-wrap: wrap; gap: var(--spacing-s) var(--spacing-m); padding: var(--spacing-m) var(--spacing-l); align-items: center; }
+    .modal__filter { flex: 1 1 160px; }
+    .modal__filter--search { flex: 2 1 240px; }
+    .modal__filter input, .modal__filter select { width: 100%; background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface); border: none; border-bottom: 1px solid var(--mat-sys-on-surface-variant); border-radius: 6px 6px 0 0; padding: 10px 12px; font: inherit; }
+    .modal__filter input:focus, .modal__filter select:focus { outline: none; border-bottom-color: var(--mat-sys-primary); }
+    .modal__filter[hidden] { display: none; }
+    .modal__reset { background: none; border: none; color: var(--mat-sys-primary); font: inherit; cursor: pointer; padding: 8px; }
+    .modal__reset[hidden] { display: none; }
+    .modal__results { overflow-y: auto; padding: var(--spacing-s) var(--spacing-l) var(--spacing-l); display: flex; flex-direction: column; gap: var(--spacing-s); min-height: 120px; }
+    .modal__status { padding: var(--spacing-l); text-align: center; color: var(--mat-sys-on-surface-variant); }
+    .modal__back { background: none; border: none; color: var(--mat-sys-primary); font: inherit; cursor: pointer; align-self: flex-start; padding: 4px 0; }
+    .result-row { background: var(--mat-sys-surface-container-high); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: var(--spacing-m); display: flex; gap: var(--spacing-m); align-items: center; justify-content: space-between; }
+    .result-row--click { cursor: pointer; }
+    .result-row--click:hover { background: var(--mat-sys-surface-container-highest); }
+    button.result-row { width: 100%; text-align: left; font: inherit; color: inherit; }
+    .result-row--click:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; }
+    .result-row__main { min-width: 0; flex: 1 1 auto; }
+    .result-row__name { font-weight: var(--font-weight-semibold); }
+    .result-row__meta { color: var(--mat-sys-on-surface-variant); font-size: var(--font-s); margin-top: 2px; }
+    .result-row__meta.expired { color: var(--mat-sys-error); }
+    .result-row__action { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: 0 0 auto; }
+    .app-grid { display: flex; flex-wrap: wrap; gap: var(--spacing-xs) var(--spacing-m); margin-top: 6px; font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); }
+    .app-grid span b { color: var(--mat-sys-on-surface); font-weight: var(--font-weight-medium); }
+    /* Statusfarben (bewusst semantisch, wie Print-/Warnfarben) */
+    .badge { display: inline-flex; align-items: center; gap: 4px; font-size: var(--font-xs); padding: 2px 8px; border-radius: var(--mat-sys-corner-full); white-space: nowrap; }
+    .badge--ok { background: rgba(155, 215, 113, 0.15); color: #9bd771; }
+    .badge--soon { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
+    .badge--expired { background: rgba(184, 31, 30, 0.22); color: var(--mat-sys-error); }
+    .chip-cat { font-size: var(--font-xs); padding: 1px 7px; border-radius: 4px; background: var(--mat-sys-surface-container-low); color: var(--mat-sys-on-surface-variant); }
+    .primary-button--sm { padding: 6px 14px; }
   </style>
 </head>
 <body>
@@ -464,7 +505,11 @@
         <div id="rows"></div>
 
         <div class="add-comp-container no-print">
-          <button type="button" class="primary-button" id="addBtn">
+          <button type="button" class="primary-button" id="openSelectBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+            <span>Mittel &amp; Anwendung wählen</span>
+          </button>
+          <button type="button" class="secondary-button" id="addBtn">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
             <span>Komponente hinzufügen</span>
           </button>
@@ -500,6 +545,32 @@
         Angaben ohne Gewähr und ohne Rechtsberatung. Maßgeblich sind die amtliche Zulassung und das Produktetikett.
       </p>
     </footer>
+  </div>
+
+  <!-- Auswahl-Dialog: Mittel & Anwendung (Etappe 1) -->
+  <div class="modal-overlay no-print" id="selectModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="selectModalTitle">
+      <div class="modal__head">
+        <h2 id="selectModalTitle">Mittel &amp; Anwendung wählen</h2>
+        <button type="button" class="icon-button" id="selectModalClose" aria-label="Schließen" title="Schließen">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.71 12 12l6.29 6.29-1.42 1.42L10.58 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.3 4.29l6.28 6.3 6.3-6.3z"/></svg>
+        </button>
+      </div>
+      <div class="modal__tabs" role="tablist">
+        <button type="button" class="modal__tab modal__tab--active" data-mtype="psm" role="tab" aria-selected="true">Pflanzenschutzmittel</button>
+        <button type="button" class="modal__tab" data-mtype="zusatz" role="tab" aria-selected="false">Zusatzstoffe</button>
+      </div>
+      <div class="modal__filters">
+        <div class="modal__filter modal__filter--search">
+          <input type="text" id="mSearch" autocomplete="off" spellcheck="false" placeholder="Mittel suchen (mind. 2 Zeichen)" aria-label="Mittel suchen" />
+        </div>
+        <div class="modal__filter" id="mKulturWrap" hidden><select id="mKultur" aria-label="Kultur"><option value="">Alle Kulturen</option></select></div>
+        <div class="modal__filter" id="mSchadorgWrap" hidden><select id="mSchadorg" aria-label="Schadorganismus"><option value="">Alle Schadorganismen</option></select></div>
+        <div class="modal__filter" id="mBBCHWrap" hidden><select id="mBBCH" aria-label="BBCH-Stadium"><option value="">Alle BBCH</option></select></div>
+        <button type="button" class="modal__reset" id="mReset" hidden>Filter zurücksetzen</button>
+      </div>
+      <div class="modal__results" id="mResults" aria-live="polite"></div>
+    </div>
   </div>
 
   <script>
@@ -1071,6 +1142,260 @@
         if (e.key === "Escape" && !legalMenu.hidden) { setLegalOpen(false); legalBtn.focus(); }
       });
     }
+
+    // ===== Auswahl-Modal: Mittel & Anwendung (Etappe 1) =====
+    // BVL-Kette: Produkt -> /awg -> /awg_aufwand + /awg_kultur + /awg_schadorg -> /kode
+    const KODELISTE_KULTUR = 948, KODELISTE_SCHADORG = 947;
+    const BVL_UNIT_LABEL = { LH: "l/ha", CH: "ml/ha", KH: "kg/ha", GH: "g/ha", SH: "Stück/ha", TH: "Tabl./ha" };
+    const kodeCache = new Map();       // "liste:kode" -> Klartext
+    const appCache = new Map();        // kennr -> [Anwendungen]
+    const modalEl = document.getElementById("selectModal");
+    const mResults = document.getElementById("mResults");
+    const mSearch = document.getElementById("mSearch");
+    const mReset = document.getElementById("mReset");
+    const mKultur = document.getElementById("mKultur"), mSchadorg = document.getElementById("mSchadorg"), mBBCH = document.getElementById("mBBCH");
+    const filterWraps = ["mKulturWrap", "mSchadorgWrap", "mBBCHWrap"].map((id) => document.getElementById(id));
+    let modalType = "psm";             // "psm" | "zusatz"
+    let modalMode = "products";        // "products" | "apps"
+    let currentApps = [];              // geladene Anwendungen des gewählten Produkts
+    let currentProduct = null;
+    let modalAbort = null;
+    let searchTimer = null;
+
+    function openModal() {
+      modalEl.hidden = false;
+      document.body.style.overflow = "hidden";
+      mSearch.value = ""; setModalMode("products"); setModalType("psm");
+      renderStatus(IS_FILE ? "Die Mittelsuche ist nur in der Online-Version (nicht bei lokaler Datei) verfügbar." : "Mind. 2 Zeichen eingeben, um zu suchen.");
+      setTimeout(() => mSearch.focus(), 30);
+    }
+    function closeModal() {
+      if (modalAbort) modalAbort.abort();
+      modalEl.hidden = true;
+      document.body.style.overflow = "";
+    }
+    function setModalType(type) {
+      modalType = type;
+      document.querySelectorAll(".modal__tab").forEach((t) => {
+        const on = t.dataset.mtype === type;
+        t.classList.toggle("modal__tab--active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      mSearch.placeholder = type === "psm" ? "Pflanzenschutzmittel suchen (mind. 2 Zeichen)" : "Zusatzstoff suchen (mind. 2 Zeichen)";
+      setModalMode("products");
+      const term = mSearch.value.trim();
+      if (term.length >= 2 && !IS_FILE) runSearch(term); else renderStatus(IS_FILE ? "Nur online verfügbar." : "Mind. 2 Zeichen eingeben.");
+    }
+    function setModalMode(mode) {
+      modalMode = mode;
+      const showFilters = mode === "apps";
+      filterWraps.forEach((w) => { w.hidden = !showFilters; });
+      mReset.hidden = !showFilters;
+    }
+    function renderStatus(text) { mResults.innerHTML = '<div class="modal__status">' + escapeHtml(text) + "</div>"; }
+
+    async function bvlGet(path, qObj, limit, signal) {
+      const q = encodeURIComponent(JSON.stringify(qObj));
+      const res = await fetch(BVL_BASE + "/" + path + "/?q=" + q + "&limit=" + limit, { signal });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return (await res.json()).items || [];
+    }
+    async function resolveKode(liste, kode, signal) {
+      if (!kode) return "";
+      const key = liste + ":" + kode;
+      if (kodeCache.has(key)) return kodeCache.get(key);
+      try {
+        const items = await bvlGet("kode", { KODELISTE: liste, KODE: kode, SPRACHE: "DE" }, 1, signal);
+        const text = (items[0] && items[0].kodetext) || kode;
+        kodeCache.set(key, text);
+        return text;
+      } catch (e) { return kode; }
+    }
+    // Zulassungs-Status-Badge aus einem Enddatum
+    function statusBadge(iso) {
+      if (!iso) return "";
+      if (isExpired(iso)) return '<span class="badge badge--expired">abgelaufen</span>';
+      const soon = new Date(iso).getTime() - Date.now() < 1000 * 60 * 60 * 24 * 183; // < ~6 Monate
+      const cls = soon ? "badge--soon" : "badge--ok";
+      const label = (soon ? "läuft bald ab · " : "zugelassen bis ") + formatBvlDate(iso);
+      return '<span class="badge ' + cls + '">' + escapeHtml(label) + "</span>";
+    }
+
+    async function loadApplications(product, signal) {
+      const kennr = product.kennr;
+      if (appCache.has(kennr)) return appCache.get(kennr);
+      const awgs = await bvlGet("awg", { KENNR: kennr }, 500, signal);
+      const apps = [];
+      for (const awg of awgs) {
+        const [aufwand, kulturen, schadorgs] = await Promise.all([
+          bvlGet("awg_aufwand", { AWG_ID: awg.awg_id }, 20, signal).catch(() => []),
+          bvlGet("awg_kultur", { AWG_ID: awg.awg_id }, 60, signal).catch(() => []),
+          bvlGet("awg_schadorg", { AWG_ID: awg.awg_id }, 60, signal).catch(() => []),
+        ]);
+        const kNames = await Promise.all(kulturen.filter((k) => k.ausgenommen !== "J").map((k) => resolveKode(KODELISTE_KULTUR, k.kultur, signal)));
+        const sNames = await Promise.all(schadorgs.filter((s) => s.ausgenommen !== "J").map((s) => resolveKode(KODELISTE_SCHADORG, s.schadorg, signal)));
+        const a0 = aufwand[0] || {};
+        apps.push({
+          awgId: awg.awg_id,
+          kulturen: kNames, schadorgs: sNames,
+          bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
+          mAufwand: a0.m_aufwand != null ? a0.m_aufwand : null, mEinheit: a0.m_aufwand_einheit || null,
+          wVon: a0.w_aufwand_von != null ? a0.w_aufwand_von : null, wBis: a0.w_aufwand_bis != null ? a0.w_aufwand_bis : null, wEinheit: a0.w_aufwand_einheit || null,
+        });
+      }
+      appCache.set(kennr, apps);
+      return apps;
+    }
+
+    // ----- Suche (Produkte bzw. Zusatzstoffe) -----
+    async function runSearch(term) {
+      if (IS_FILE) { renderStatus("Die Mittelsuche ist nur in der Online-Version verfügbar."); return; }
+      if (modalAbort) modalAbort.abort();
+      modalAbort = new AbortController();
+      const ctrl = modalAbort;
+      const to = setTimeout(() => ctrl.abort(), 12000);
+      renderStatus("Suche …");
+      try {
+        if (modalType === "psm") {
+          const items = await bvlGet("mittel", { MITTELNAME: { $instr: term } }, 25, ctrl.signal);
+          const seen = new Set();
+          const products = items.filter((o) => o.mittelname && !seen.has(o.mittelname) && seen.add(o.mittelname))
+            .sort((a, b) => a.mittelname.localeCompare(b.mittelname, "de")).slice(0, 25);
+          renderProducts(products);
+        } else {
+          const items = await bvlGet("zusatzstoff", { MITTELNAME: { $instr: term } }, 25, ctrl.signal);
+          const seen = new Set();
+          const list = items.filter((o) => o.mittelname && !seen.has(o.mittelname) && seen.add(o.mittelname))
+            .sort((a, b) => a.mittelname.localeCompare(b.mittelname, "de")).slice(0, 25);
+          renderZusatz(list);
+        }
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        renderStatus("BVL-Suche nicht erreichbar. Bitte später erneut versuchen.");
+      } finally { clearTimeout(to); }
+    }
+
+    function renderProducts(products) {
+      setModalMode("products");
+      if (!products.length) { renderStatus("Keine Treffer."); return; }
+      mResults.innerHTML = "";
+      products.forEach((p) => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "result-row result-row--click";
+        row.innerHTML =
+          '<div class="result-row__main"><div class="result-row__name">' + escapeHtml(p.mittelname) + "</div>" +
+          '<div class="result-row__meta' + (isExpired(p.zul_ende) ? " expired" : "") + '">Zul.-Nr. ' + escapeHtml(p.kennr || "–") +
+          (p.zul_ende ? " · gültig bis " + escapeHtml(formatBvlDate(p.zul_ende)) : "") + (isExpired(p.zul_ende) ? " (abgelaufen)" : "") + "</div></div>" +
+          '<div class="result-row__action">' + statusBadge(p.zul_ende) + '<span class="badge">Anwendungen ›</span></div>';
+        row.addEventListener("click", () => openProduct(p));
+        mResults.appendChild(row);
+      });
+    }
+
+    async function openProduct(product) {
+      currentProduct = product;
+      renderStatus("Anwendungen werden geladen …");
+      if (modalAbort) modalAbort.abort();
+      modalAbort = new AbortController();
+      const ctrl = modalAbort;
+      const to = setTimeout(() => ctrl.abort(), 20000);
+      try {
+        currentApps = await loadApplications(product, ctrl.signal);
+        populateFilters(currentApps);
+        setModalMode("apps");
+        renderApps();
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        renderStatus("Anwendungen konnten nicht geladen werden.");
+      } finally { clearTimeout(to); }
+    }
+
+    function populateFilters(apps) {
+      const kult = new Set(), scha = new Set(), bbch = new Set();
+      apps.forEach((a) => { a.kulturen.forEach((k) => kult.add(k)); a.schadorgs.forEach((s) => scha.add(s)); if (a.bbchVon || a.bbchBis) bbch.add((a.bbchVon || "?") + "–" + (a.bbchBis || "?")); });
+      const fill = (sel, values, allLabel) => {
+        sel.innerHTML = '<option value="">' + allLabel + "</option>" + [...values].sort((a, b) => a.localeCompare(b, "de")).map((v) => '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + "</option>").join("");
+      };
+      fill(mKultur, kult, "Alle Kulturen"); fill(mSchadorg, scha, "Alle Schadorganismen"); fill(mBBCH, bbch, "Alle BBCH");
+    }
+
+    function renderApps() {
+      const fk = mKultur.value, fs = mSchadorg.value, fb = mBBCH.value;
+      const list = currentApps.filter((a) =>
+        (!fk || a.kulturen.includes(fk)) && (!fs || a.schadorgs.includes(fs)) &&
+        (!fb || ((a.bbchVon || "?") + "–" + (a.bbchBis || "?")) === fb));
+      mResults.innerHTML = "";
+      const back = document.createElement("button");
+      back.type = "button"; back.className = "modal__back";
+      back.textContent = "‹ Zurück zur Mittelsuche";
+      back.addEventListener("click", () => { setModalMode("products"); runSearch(mSearch.value.trim()); });
+      mResults.appendChild(back);
+      const head = document.createElement("div");
+      head.className = "result-row";
+      head.innerHTML = '<div class="result-row__main"><div class="result-row__name">' + escapeHtml(currentProduct.mittelname) + "</div>" +
+        '<div class="result-row__meta">Zul.-Nr. ' + escapeHtml(currentProduct.kennr || "–") + "</div></div>" +
+        '<div class="result-row__action">' + statusBadge(currentProduct.zul_ende) + "</div>";
+      mResults.appendChild(head);
+      if (!list.length) { const s = document.createElement("div"); s.className = "modal__status"; s.textContent = "Keine Anwendung passt zu den Filtern."; mResults.appendChild(s); return; }
+      list.forEach((a) => {
+        const rate = a.mAufwand != null ? fmt(a.mAufwand, Number.isInteger(a.mAufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[a.mEinheit] || a.mEinheit || "") : "–";
+        const water = a.wVon != null ? fmt(a.wVon, 0) + (a.wBis != null && a.wBis !== a.wVon ? "–" + fmt(a.wBis, 0) : "") + " " + (BVL_UNIT_LABEL[a.wEinheit] || "l/ha") : "–";
+        const bbch = (a.bbchVon || a.bbchBis) ? (a.bbchVon || "?") + "–" + (a.bbchBis || "?") : "–";
+        const row = document.createElement("div");
+        row.className = "result-row";
+        row.innerHTML =
+          '<div class="result-row__main">' +
+          '<div class="app-grid">' +
+          "<span><b>Kultur:</b> " + escapeHtml(a.kulturen.join(", ") || "–") + "</span>" +
+          "<span><b>Schadorg.:</b> " + escapeHtml(a.schadorgs.join(", ") || "–") + "</span>" +
+          "</div><div class=\"app-grid\">" +
+          "<span><b>Aufwand:</b> " + escapeHtml(rate) + "</span>" +
+          "<span><b>Wasser:</b> " + escapeHtml(water) + "</span>" +
+          "<span><b>BBCH:</b> " + escapeHtml(bbch) + "</span>" +
+          "</div></div>" +
+          '<div class="result-row__action"><button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
+        row.querySelector("button").addEventListener("click", () => selectApplication(currentProduct, a));
+        mResults.appendChild(row);
+      });
+    }
+
+    function renderZusatz(list) {
+      setModalMode("products");
+      if (!list.length) { renderStatus("Keine Treffer."); return; }
+      mResults.innerHTML = "";
+      list.forEach((z) => {
+        const row = document.createElement("div");
+        row.className = "result-row";
+        row.innerHTML =
+          '<div class="result-row__main"><div class="result-row__name">' + escapeHtml(z.mittelname) + "</div>" +
+          '<div class="result-row__meta' + (isExpired(z.genehmigungsende) ? " expired" : "") + '">Zusatzstoff · Kennr. ' + escapeHtml(z.kennr || "–") +
+          (z.genehmigungsende ? " · gültig bis " + escapeHtml(formatBvlDate(z.genehmigungsende)) : "") + "</div></div>" +
+          '<div class="result-row__action">' + statusBadge(z.genehmigungsende) + '<button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
+        row.querySelector("button").addEventListener("click", () => selectZusatz(z));
+        mResults.appendChild(row);
+      });
+    }
+
+    // Etappe 2 füllt diese Übernahme in den Rechner. Etappe 1: nur schließen (Platzhalter).
+    function selectApplication(product, app) { console.log("[Etappe 2] Anwendung übernehmen:", product.mittelname, app); closeModal(); }
+    function selectZusatz(z) { console.log("[Etappe 2] Zusatzstoff übernehmen:", z.mittelname); closeModal(); }
+
+    // ----- Verdrahtung -----
+    document.getElementById("openSelectBtn").addEventListener("click", openModal);
+    document.getElementById("selectModalClose").addEventListener("click", closeModal);
+    modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modalEl.hidden) closeModal(); });
+    document.querySelectorAll(".modal__tab").forEach((t) => t.addEventListener("click", () => setModalType(t.dataset.mtype)));
+    mSearch.addEventListener("input", () => {
+      const term = mSearch.value.trim();
+      clearTimeout(searchTimer);
+      setModalMode("products");
+      if (term.length < 2) { renderStatus(IS_FILE ? "Nur online verfügbar." : "Mind. 2 Zeichen eingeben."); return; }
+      searchTimer = setTimeout(() => runSearch(term), 280);
+    });
+    [mKultur, mSchadorg, mBBCH].forEach((s) => s.addEventListener("change", renderApps));
+    mReset.addEventListener("click", () => { mKultur.value = ""; mSchadorg.value = ""; mBBCH.value = ""; renderApps(); });
 
     // ===== Start =====
     renderRows();
