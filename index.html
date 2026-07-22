@@ -434,6 +434,11 @@
     .badge--soon { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
     .badge--expired { background: rgba(184, 31, 30, 0.22); color: var(--mat-sys-error); }
     .chip-cat { font-size: var(--font-xs); padding: 1px 7px; border-radius: 4px; background: var(--mat-sys-surface-container-low); color: var(--mat-sys-on-surface-variant); }
+    .skel { background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%); background-size: 200% 100%; animation: skel-shimmer 1.3s ease-in-out infinite; border-radius: var(--mat-sys-corner-small); }
+    .skel--line { height: 12px; }
+    .skel--btn { width: 96px; height: 32px; flex: 0 0 auto; }
+    @keyframes skel-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
     .primary-button--sm { padding: 6px 14px; }
     /* Komponenten-Warnungen (Etappe 3): nur die Meldung farbig, Feld bleibt neutral */
     .comp-warn { display: flex; flex-direction: column; gap: var(--spacing-xxs); margin-top: var(--spacing-xs); }
@@ -1180,30 +1185,45 @@
       return '<span class="badge ' + cls + '">' + escapeHtml(label) + "</span>";
     }
 
-    async function loadApplications(product, signal) {
+    // Sub-Daten EINER Anwendung auflösen (Aufwand/Wasser, Kulturen, Schadorganismen).
+    async function resolveOneApp(awg, signal) {
+      const [aufwand, kulturen, schadorgs] = await Promise.all([
+        bvlGet("awg_aufwand", { AWG_ID: awg.awg_id }, 20, signal).catch(() => []),
+        bvlGet("awg_kultur", { AWG_ID: awg.awg_id }, 60, signal).catch(() => []),
+        bvlGet("awg_schadorg", { AWG_ID: awg.awg_id }, 60, signal).catch(() => []),
+      ]);
+      const kNames = await Promise.all(kulturen.filter((k) => k.ausgenommen !== "J").map((k) => resolveKode(KODELISTE_KULTUR, k.kultur, signal)));
+      const sNames = await Promise.all(schadorgs.filter((s) => s.ausgenommen !== "J").map((s) => resolveKode(KODELISTE_SCHADORG, s.schadorg, signal)));
+      const a0 = aufwand[0] || {};
+      return {
+        awgId: awg.awg_id,
+        kulturen: kNames, schadorgs: sNames,
+        bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
+        mAufwand: a0.m_aufwand != null ? a0.m_aufwand : null, mEinheit: a0.m_aufwand_einheit || null,
+        wVon: a0.w_aufwand_von != null ? a0.w_aufwand_von : null, wBis: a0.w_aufwand_bis != null ? a0.w_aufwand_bis : null, wEinheit: a0.w_aufwand_einheit || null,
+      };
+    }
+    // Alle Anwendungen eines Produkts laden – parallel mit begrenzter Nebenläufigkeit + Fortschritt.
+    async function loadApplications(product, signal, onProgress) {
       const kennr = product.kennr;
       if (appCache.has(kennr)) return appCache.get(kennr);
       const awgs = await bvlGet("awg", { KENNR: kennr }, 500, signal);
-      const apps = [];
-      for (const awg of awgs) {
-        const [aufwand, kulturen, schadorgs] = await Promise.all([
-          bvlGet("awg_aufwand", { AWG_ID: awg.awg_id }, 20, signal).catch(() => []),
-          bvlGet("awg_kultur", { AWG_ID: awg.awg_id }, 60, signal).catch(() => []),
-          bvlGet("awg_schadorg", { AWG_ID: awg.awg_id }, 60, signal).catch(() => []),
-        ]);
-        const kNames = await Promise.all(kulturen.filter((k) => k.ausgenommen !== "J").map((k) => resolveKode(KODELISTE_KULTUR, k.kultur, signal)));
-        const sNames = await Promise.all(schadorgs.filter((s) => s.ausgenommen !== "J").map((s) => resolveKode(KODELISTE_SCHADORG, s.schadorg, signal)));
-        const a0 = aufwand[0] || {};
-        apps.push({
-          awgId: awg.awg_id,
-          kulturen: kNames, schadorgs: sNames,
-          bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
-          mAufwand: a0.m_aufwand != null ? a0.m_aufwand : null, mEinheit: a0.m_aufwand_einheit || null,
-          wVon: a0.w_aufwand_von != null ? a0.w_aufwand_von : null, wBis: a0.w_aufwand_bis != null ? a0.w_aufwand_bis : null, wEinheit: a0.w_aufwand_einheit || null,
-        });
+      const apps = new Array(awgs.length);
+      const CONCURRENCY = 8;
+      let done = 0;
+      for (let start = 0; start < awgs.length; start += CONCURRENCY) {
+        if (signal.aborted) throw new DOMException("aborted", "AbortError");
+        const slice = awgs.slice(start, start + CONCURRENCY);
+        await Promise.all(slice.map((awg, j) =>
+          resolveOneApp(awg, signal)
+            .then((a) => { apps[start + j] = a; })
+            .catch(() => { apps[start + j] = { awgId: awg.awg_id, kulturen: [], schadorgs: [], bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null, mAufwand: null, mEinheit: null, wVon: null, wBis: null, wEinheit: null }; })
+            .finally(() => { done++; if (onProgress) onProgress(done, awgs.length); })
+        ));
       }
-      appCache.set(kennr, apps);
-      return apps;
+      const result = apps.filter(Boolean);
+      appCache.set(kennr, result);
+      return result;
     }
 
     // ----- Suche (Produkte bzw. Zusatzstoffe) -----
@@ -1254,13 +1274,14 @@
 
     async function openProduct(product) {
       currentProduct = product;
-      renderStatus("Anwendungen werden geladen …");
       if (modalAbort) modalAbort.abort();
       modalAbort = new AbortController();
       const ctrl = modalAbort;
-      const to = setTimeout(() => ctrl.abort(), 20000);
+      const to = setTimeout(() => ctrl.abort(), 60000);
+      renderSkeleton(product);
       try {
-        currentApps = await loadApplications(product, ctrl.signal);
+        currentApps = await loadApplications(product, ctrl.signal, updateLoadProgress);
+        if (ctrl.signal.aborted) return;
         populateFilters(currentApps);
         setModalMode("apps");
         renderApps();
@@ -1269,10 +1290,46 @@
         renderStatus("Anwendungen konnten nicht geladen werden.");
       } finally { clearTimeout(to); }
     }
+    // Skeleton-Ansicht während die Anwendungen geladen werden.
+    function renderSkeleton(product) {
+      setModalMode("apps");
+      mResults.innerHTML = "";
+      const back = document.createElement("button");
+      back.type = "button"; back.className = "modal__back"; back.textContent = "‹ Zurück zur Mittelsuche";
+      back.addEventListener("click", () => { setModalMode("products"); runSearch(mSearch.value.trim()); });
+      mResults.appendChild(back);
+      const head = document.createElement("div");
+      head.className = "result-row";
+      head.innerHTML = '<div class="result-row__main"><div class="result-row__name">' + escapeHtml(product.mittelname) + "</div>" +
+        '<div class="result-row__meta">Zul.-Nr. ' + escapeHtml(product.kennr || "–") + "</div></div>" +
+        '<div class="result-row__action">' + statusBadge(product.zul_ende) + "</div>";
+      mResults.appendChild(head);
+      const prog = document.createElement("div");
+      prog.className = "modal__status"; prog.id = "mLoadProgress"; prog.textContent = "Anwendungen werden geladen …";
+      mResults.appendChild(prog);
+      for (let i = 0; i < 6; i++) {
+        const sk = document.createElement("div");
+        sk.className = "result-row";
+        sk.innerHTML = '<div class="result-row__main"><div class="skel skel--line" style="width:60%"></div><div class="skel skel--line" style="width:80%;margin-top:6px"></div></div><div class="skel skel--btn"></div>';
+        mResults.appendChild(sk);
+      }
+    }
+    function updateLoadProgress(done, total) {
+      const prog = document.getElementById("mLoadProgress");
+      if (prog) prog.textContent = "Anwendungen werden geladen … (" + done + "/" + total + ")";
+    }
 
+    // BBCH-Fenster: beide -> "13–85"; nur von -> "ab 13" (offene Obergrenze); nur bis -> "bis 85".
+    function bbchLabel(a) {
+      const v = a.bbchVon, b = a.bbchBis;
+      if (v && b) return v + "–" + b;
+      if (v) return "ab " + v;
+      if (b) return "bis " + b;
+      return "–";
+    }
     function populateFilters(apps) {
       const kult = new Set(), scha = new Set(), bbch = new Set();
-      apps.forEach((a) => { a.kulturen.forEach((k) => kult.add(k)); a.schadorgs.forEach((s) => scha.add(s)); if (a.bbchVon || a.bbchBis) bbch.add((a.bbchVon || "?") + "–" + (a.bbchBis || "?")); });
+      apps.forEach((a) => { a.kulturen.forEach((k) => kult.add(k)); a.schadorgs.forEach((s) => scha.add(s)); if (a.bbchVon || a.bbchBis) bbch.add(bbchLabel(a)); });
       const fill = (sel, values, allLabel) => {
         sel.innerHTML = '<option value="">' + allLabel + "</option>" + [...values].sort((a, b) => a.localeCompare(b, "de")).map((v) => '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + "</option>").join("");
       };
@@ -1283,7 +1340,7 @@
       const fk = mKultur.value, fs = mSchadorg.value, fb = mBBCH.value;
       const list = currentApps.filter((a) =>
         (!fk || a.kulturen.includes(fk)) && (!fs || a.schadorgs.includes(fs)) &&
-        (!fb || ((a.bbchVon || "?") + "–" + (a.bbchBis || "?")) === fb));
+        (!fb || bbchLabel(a) === fb));
       mResults.innerHTML = "";
       const back = document.createElement("button");
       back.type = "button"; back.className = "modal__back";
@@ -1300,7 +1357,7 @@
       list.forEach((a) => {
         const rate = a.mAufwand != null ? fmt(a.mAufwand, Number.isInteger(a.mAufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[a.mEinheit] || a.mEinheit || "") : "–";
         const water = a.wVon != null ? fmt(a.wVon, 0) + (a.wBis != null && a.wBis !== a.wVon ? "–" + fmt(a.wBis, 0) : "") + " " + (BVL_UNIT_LABEL[a.wEinheit] || "l/ha") : "–";
-        const bbch = (a.bbchVon || a.bbchBis) ? (a.bbchVon || "?") + "–" + (a.bbchBis || "?") : "–";
+        const bbch = bbchLabel(a);
         const row = document.createElement("div");
         row.className = "result-row";
         row.innerHTML =
