@@ -170,6 +170,30 @@
     .field input:focus { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
     .field input:read-only { color: var(--mat-sys-on-surface-variant); }
     .field input.invalid { border-bottom-color: var(--mat-sys-error); }
+    /* Klickbare Komponenten-Auswahl (öffnet den Dialog) – optisch wie .field input */
+    .comp-select {
+      width: 100%; font: inherit; color: var(--mat-sys-on-surface);
+      background: var(--mat-sys-surface-container-highest);
+      border: none; border-bottom: 1px solid var(--mat-sys-outline);
+      border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
+      padding: 10px var(--spacing-sm); outline: none;
+      display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-xs);
+      text-align: left; cursor: pointer;
+    }
+    .comp-select:hover { background: var(--mat-sys-surface-container-high); }
+    .comp-select:focus-visible { border-bottom: 2px solid var(--mat-sys-primary); padding-bottom: 9px; }
+    .comp-select__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .comp-select__name--empty { color: var(--mat-sys-on-surface-variant); }
+    .comp-select svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--mat-sys-on-surface-variant); }
+    .modal__manual { display: flex; gap: var(--spacing-s); margin-top: var(--spacing-s); }
+    .modal__manual input {
+      flex: 1 1 auto; font: inherit; color: var(--mat-sys-on-surface);
+      background: var(--mat-sys-surface-container-high); border: none;
+      border-bottom: 1px solid var(--mat-sys-outline);
+      border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0;
+      padding: 10px var(--spacing-sm);
+    }
+    .modal__manual input:focus { outline: none; border-bottom-color: var(--mat-sys-primary); }
     .text-right { text-align: right; }
     .field__error { font-size: var(--font-xs); color: var(--mat-sys-error); margin-top: var(--spacing-xxs); min-height: 1em; }
     .field__hint { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-top: var(--spacing-xxs); }
@@ -262,22 +286,6 @@
     .secondary-button:hover { background: color-mix(in srgb, var(--mat-sys-primary) 12%, transparent); }
     .secondary-button svg { width: 18px; height: 18px; }
 
-    /* Autocomplete-Dropdown */
-    .autocomplete-panel {
-      position: absolute; top: 100%; left: 0; right: 0; z-index: 40;
-      margin-top: 2px; background: var(--mat-sys-surface);
-      border: 1px solid var(--mat-sys-outline-variant);
-      border-radius: var(--mat-sys-corner-small);
-      box-shadow: var(--mat-sys-level1);
-      max-height: 320px; overflow-y: auto; display: none;
-    }
-    .autocomplete-panel.open { display: block; }
-    .autocomplete-option { padding: var(--spacing-s) var(--spacing-sm); cursor: pointer; }
-    .autocomplete-option:hover, .autocomplete-option.active { background: var(--mat-sys-outline-variant); }
-    .autocomplete-option__name { font-size: var(--font-m); color: var(--mat-sys-on-surface); }
-    .autocomplete-option__meta { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-top: 1px; }
-    .autocomplete-option__meta.expired { color: var(--mat-sys-error); }
-    .autocomplete-status { padding: var(--spacing-s) var(--spacing-sm); font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); }
 
     /* Summenzeile */
     .summary-total-row {
@@ -368,7 +376,6 @@
       html, body { background: #ffffff; color: #000000; }
       .page { max-width: none; padding: 0; }
       .no-print { display: none !important; }
-      .autocomplete-panel { display: none !important; }
       .card { box-shadow: none; border: 1px solid #999999; background: #ffffff; }
       .app-footer, .field > label, .calc-row-header,
       .summary-total-row__label, .filling-row__comp-label, .filling-row__comp-value,
@@ -511,11 +518,7 @@
         <div id="rows"></div>
 
         <div class="add-comp-container no-print">
-          <button type="button" class="primary-button" id="openSelectBtn">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
-            <span>Mittel &amp; Anwendung wählen</span>
-          </button>
-          <button type="button" class="secondary-button" id="addBtn">
+          <button type="button" class="primary-button" id="addBtn">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
             <span>Komponente hinzufügen</span>
           </button>
@@ -557,7 +560,7 @@
   <div class="modal-overlay no-print" id="selectModal" hidden>
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="selectModalTitle">
       <div class="modal__head">
-        <h2 id="selectModalTitle">Mittel &amp; Anwendung wählen</h2>
+        <h2 id="selectModalTitle">Anwendung wählen</h2>
         <button type="button" class="icon-button" id="selectModalClose" aria-label="Schließen" title="Schließen">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.71 12 12l6.29 6.29-1.42 1.42L10.58 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.3 4.29l6.28 6.3 6.3-6.3z"/></svg>
         </button>
@@ -729,9 +732,10 @@
     const printRowEl = document.getElementById("printRow");
 
     function svgIcon(path) {
-      return `<svg viewBox="0 0 24 24" fill="currentColor"><path d="${path}"/></svg>`;
+      return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`;
     }
     const ICON_DELETE = "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
+    const ICON_SEARCH = "M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z";
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -836,16 +840,14 @@
         nameField.className = "field";
         if (isWater) {
           nameField.innerHTML = `<input type="text" value="Wasser" readonly aria-label="Komponente (Wasser)" />`;
-        } else if (comp.fromModal) {
-          nameField.innerHTML = `
-            <input type="text" class="comp-name" value="${escapeHtml(comp.name)}" readonly aria-label="Komponente" />
-            <div class="field__hint comp-hint"></div>
-            <div class="comp-warn"></div>`;
         } else {
+          const label = comp.name ? escapeHtml(comp.name) : "Anwendung wählen \u2026";
+          const aria = comp.name ? "Anwendung wählen: " + escapeHtml(comp.name) : "Anwendung wählen";
           nameField.innerHTML = `
-            <input type="text" class="comp-name" placeholder="Bitte wählen" autocomplete="off"
-                   spellcheck="false" aria-label="Komponente" value="${escapeHtml(comp.name)}" />
-            <div class="autocomplete-panel"></div>
+            <button type="button" class="comp-select" aria-label="${aria}">
+              <span class="comp-select__name${comp.name ? "" : " comp-select__name--empty"}">${label}</span>
+              ${svgIcon(ICON_SEARCH)}
+            </button>
             <div class="field__hint comp-hint"></div>
             <div class="comp-warn"></div>`;
         }
@@ -874,7 +876,8 @@
         wireRateField(rateField, comp);
 
         if (!isWater) {
-          if (!comp.fromModal) setupAutocomplete(nameField, comp);
+          const selBtn = nameField.querySelector(".comp-select");
+          if (selBtn) selBtn.addEventListener("click", () => openModalFor(comp));
           updateCompHint(nameField, comp);
           const delBtn = delCol.querySelector(".comp-delete");
           if (delBtn) delBtn.addEventListener("click", () => {
@@ -923,7 +926,7 @@
           const appr = comp.app.approvedRate;
           if (comp.rate != null && appr != null) {
             if (comp.rate > appr) msgs.push(["error", "über zugelassener Höchstmenge (max. " + nfHa.format(appr) + " " + unitLabel + "/ha)"]);
-            else if (comp.rate < appr) msgs.push(["warn", "unter zugelassener Aufwandmenge " + nfHa.format(appr) + " " + unitLabel + "/ha — geringere Wirkung, Resistenzrisiko"]);
+            else if (comp.rate < appr) msgs.push(["warn", "unter zugelassener Aufwandmenge " + nfHa.format(appr) + " " + unitLabel + "/ha"]);
           }
           const wEin = comp.app.wEinheit;
           if (waterRate != null && comp.app.wVon != null && comp.app.wBis != null && (!wEin || wEin === "LH") && (waterRate < comp.app.wVon || waterRate > comp.app.wBis)) {
@@ -1006,119 +1009,6 @@
       });
     }
 
-    // ===== Autocomplete gegen die BVL-API =====
-    function setupAutocomplete(nameField, comp) {
-      const input = nameField.querySelector(".comp-name");
-      const panel = nameField.querySelector(".autocomplete-panel");
-      let debounceTimer = null;
-      let abortCtrl = null;
-      let activeIndex = -1;
-      let currentOptions = [];
-
-      function closePanel() { panel.classList.remove("open"); activeIndex = -1; }
-
-      function selectOption(opt) {
-        comp.name = opt.mittelname;
-        comp.registrationNumber = opt.kennr || "";
-        comp.authEndDate = opt.zul_ende || null;
-        input.value = opt.mittelname;
-        updateCompHint(nameField, comp);
-        closePanel();
-        renderResults();
-        resolveProductUnit(comp);
-      }
-
-      function renderPanel(options, statusText) {
-        currentOptions = options;
-        activeIndex = -1;
-        if (statusText) {
-          panel.innerHTML = `<div class="autocomplete-status">${escapeHtml(statusText)}</div>`;
-          panel.classList.add("open");
-          return;
-        }
-        if (!options.length) { closePanel(); return; }
-        panel.innerHTML = options
-          .map((o, i) => {
-            const valid = o.zul_ende ? "gültig bis " + formatBvlDate(o.zul_ende) : "";
-            const expired = isExpired(o.zul_ende);
-            const meta = [o.kennr ? "Zul.-Nr. " + o.kennr : "", valid].filter(Boolean).join(" · ") + (expired ? " (abgelaufen)" : "");
-            return `<div class="autocomplete-option" data-i="${i}">
-                <div class="autocomplete-option__name">${escapeHtml(o.mittelname)}</div>
-                <div class="autocomplete-option__meta${expired ? " expired" : ""}">${escapeHtml(meta)}</div>
-              </div>`;
-          })
-          .join("");
-        panel.classList.add("open");
-        panel.querySelectorAll(".autocomplete-option").forEach((el) => {
-          el.addEventListener("mousedown", (e) => { e.preventDefault(); selectOption(options[Number(el.dataset.i)]); });
-        });
-      }
-
-      async function search(term) {
-        if (IS_FILE) { renderPanel([], "Mittelsuche nur in der Online-Version verfügbar – Name frei eingeben"); return; }
-        if (abortCtrl) abortCtrl.abort();
-        abortCtrl = new AbortController();
-        const ctrl = abortCtrl;
-        let timedOut = false;
-        const timeoutId = setTimeout(() => { timedOut = true; ctrl.abort(); }, 8000);
-        if (document.activeElement === input) renderPanel([], "Suche …");
-        try {
-          const q = encodeURIComponent(JSON.stringify({ MITTELNAME: { $instr: term } }));
-          const res = await fetch(`${BVL_BASE}/mittel/?q=${q}&limit=25`, { signal: ctrl.signal });
-          if (!res.ok) throw new Error("HTTP " + res.status);
-          const data = await res.json();
-          // Bereits in anderen Zeilen gewählte Mittel ausblenden
-          const takenNames = state.components.filter((c) => c.id !== comp.id).map((c) => c.name);
-          const seen = new Set();
-          const items = (data.items || []).filter((o) => {
-            if (!o.mittelname || takenNames.includes(o.mittelname) || seen.has(o.mittelname)) return false;
-            seen.add(o.mittelname);
-            return true;
-          });
-          items.sort((a, b) => a.mittelname.localeCompare(b.mittelname, "de"));
-          if (document.activeElement === input) renderPanel(items.slice(0, 20), items.length ? null : "Keine Treffer");
-        } catch (err) {
-          if (err.name === "AbortError" && !timedOut) return; // durch neuen Tastendruck ersetzt
-          if (document.activeElement === input) renderPanel([], "BVL-Suche nicht erreichbar – freie Eingabe möglich");
-        } finally {
-          clearTimeout(timeoutId);
-        }
-      }
-
-      input.addEventListener("input", () => {
-        const term = input.value.trim();
-        // freie Eingabe zulassen; getroffene Zulassungsdaten verwerfen, wenn Name geändert wird
-        comp.name = input.value;
-        comp.registrationNumber = "";
-        comp.authEndDate = null;
-        if (comp.unitFixed) { comp.unitFixed = false; reRenderRateField(comp); }
-        updateCompHint(nameField, comp);
-        renderResults();
-
-        clearTimeout(debounceTimer);
-        if (term.length < 2) { closePanel(); return; }
-        debounceTimer = setTimeout(() => search(term), 250);
-      });
-
-      input.addEventListener("keydown", (e) => {
-        if (!panel.classList.contains("open") || !currentOptions.length) return;
-        const opts = panel.querySelectorAll(".autocomplete-option");
-        if (e.key === "ArrowDown") { e.preventDefault(); activeIndex = Math.min(activeIndex + 1, opts.length - 1); }
-        else if (e.key === "ArrowUp") { e.preventDefault(); activeIndex = Math.max(activeIndex - 1, 0); }
-        else if (e.key === "Enter") { if (activeIndex >= 0) { e.preventDefault(); selectOption(currentOptions[activeIndex]); } return; }
-        else if (e.key === "Escape") { closePanel(); return; }
-        else return;
-        opts.forEach((el, i) => el.classList.toggle("active", i === activeIndex));
-        if (opts[activeIndex]) opts[activeIndex].scrollIntoView({ block: "nearest" });
-      });
-
-      input.addEventListener("blur", () => setTimeout(closePanel, 150));
-      input.addEventListener("focus", () => {
-        const term = input.value.trim();
-        if (term.length >= 2 && currentOptions.length) panel.classList.add("open");
-      });
-    }
-
     // ===== Top-Level-Eingaben =====
     const fieldSizeInput = document.getElementById("fieldSize");
     const tankCapacityInput = document.getElementById("tankCapacity");
@@ -1155,8 +1045,10 @@
     setupNumericField(bufferInput, false, () => state.bufferL, (n) => { state.bufferL = n; });
 
     document.getElementById("addBtn").addEventListener("click", () => {
-      state.components.push({ id: uid(), isWater: false, name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null });
+      const comp = { id: uid(), isWater: false, name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null };
+      state.components.push(comp);
       renderRows();
+      openModalFor(comp);
     });
 
     document.getElementById("printBtn").addEventListener("click", () => window.print());
@@ -1214,14 +1106,16 @@
     let currentProduct = null;
     let modalAbort = null;
     let searchTimer = null;
+    let modalTargetId = null;
 
     function openModal() {
       modalEl.hidden = false;
       document.body.style.overflow = "hidden";
       mSearch.value = ""; setModalMode("products"); setModalType("psm");
-      renderStatus(IS_FILE ? "Die Mittelsuche ist nur in der Online-Version (nicht bei lokaler Datei) verfügbar." : "Mind. 2 Zeichen eingeben, um zu suchen.");
+      showIdleState();
       setTimeout(() => mSearch.focus(), 30);
     }
+    function openModalFor(comp) { modalTargetId = comp.id; openModal(); }
     function closeModal() {
       if (modalAbort) modalAbort.abort();
       modalEl.hidden = true;
@@ -1237,7 +1131,7 @@
       mSearch.placeholder = type === "psm" ? "Pflanzenschutzmittel suchen (mind. 2 Zeichen)" : "Zusatzstoff suchen (mind. 2 Zeichen)";
       setModalMode("products");
       const term = mSearch.value.trim();
-      if (term.length >= 2 && !IS_FILE) runSearch(term); else renderStatus(IS_FILE ? "Nur online verfügbar." : "Mind. 2 Zeichen eingeben.");
+      if (term.length >= 2 && !IS_FILE) runSearch(term); else showIdleState();
     }
     function setModalMode(mode) {
       modalMode = mode;
@@ -1246,6 +1140,18 @@
       mReset.hidden = !showFilters;
     }
     function renderStatus(text) { mResults.innerHTML = '<div class="modal__status">' + escapeHtml(text) + "</div>"; }
+    function showIdleState() { if (IS_FILE) renderManualEntry(); else renderStatus("Mind. 2 Zeichen eingeben, um zu suchen."); }
+    // Offline-Fallback: freie Namenseingabe, weil die BVL-Suche nur online funktioniert.
+    function renderManualEntry() {
+      mResults.innerHTML = '<div class="modal__status">Offline \u2013 die BVL-Suche ist nur online verfügbar. Mittel manuell eintragen:</div>';
+      const wrap = document.createElement("div"); wrap.className = "modal__manual";
+      const inp = document.createElement("input"); inp.type = "text"; inp.placeholder = "Mittel-Name"; inp.setAttribute("aria-label", "Mittel-Name");
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "primary-button primary-button--sm"; btn.textContent = "Übernehmen";
+      const submit = () => { const n = inp.value.trim(); if (n) selectManual(n); };
+      btn.addEventListener("click", submit);
+      inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+      wrap.append(inp, btn); mResults.appendChild(wrap); setTimeout(() => inp.focus(), 30);
+    }
 
     async function bvlGet(path, qObj, limit, signal) {
       const q = encodeURIComponent(JSON.stringify(qObj));
@@ -1302,7 +1208,7 @@
 
     // ----- Suche (Produkte bzw. Zusatzstoffe) -----
     async function runSearch(term) {
-      if (IS_FILE) { renderStatus("Die Mittelsuche ist nur in der Online-Version verfügbar."); return; }
+      if (IS_FILE) { showIdleState(); return; }
       if (modalAbort) modalAbort.abort();
       modalAbort = new AbortController();
       const ctrl = modalAbort;
@@ -1430,14 +1336,20 @@
       });
     }
 
-    // Übernimmt eine gewählte Anwendung als Komponente in den Rechner (Etappe 2).
+    // Setzt die Auswahl auf die Komponente, die den Dialog geöffnet hat.
+    function fillTarget(patch) {
+      const comp = state.components.find((c) => c.id === modalTargetId);
+      if (!comp) { closeModal(); return; }
+      Object.assign(comp, patch);
+      renderRows(); closeModal();
+    }
     function selectApplication(product, app) {
       const unit = BVL_UNIT_MAP[app.mEinheit] || "L";
-      state.components.push({
-        id: uid(), isWater: false, fromModal: true,
+      fillTarget({
         name: product.mittelname, unit: unit,
         rate: app.mAufwand != null ? app.mAufwand : null, unitFixed: true,
         registrationNumber: product.kennr || "", authEndDate: product.zul_ende || null,
+        isZusatz: false,
         app: {
           kulturen: app.kulturen || [], schadorgs: app.schadorgs || [],
           bbchVon: app.bbchVon || null, bbchBis: app.bbchBis || null,
@@ -1445,20 +1357,19 @@
           wVon: app.wVon != null ? app.wVon : null, wBis: app.wBis != null ? app.wBis : null, wEinheit: app.wEinheit || null,
         },
       });
-      renderRows(); closeModal();
     }
-    // Übernimmt einen Zusatzstoff als Komponente (freie Menge, keine BVL-Dosis).
     function selectZusatz(z) {
-      state.components.push({
-        id: uid(), isWater: false, fromModal: true, isZusatz: true,
+      fillTarget({
         name: z.mittelname, unit: "L", rate: null, unitFixed: false,
         registrationNumber: z.kennr || "", authEndDate: z.genehmigungsende || null,
+        isZusatz: true, app: null,
       });
-      renderRows(); closeModal();
+    }
+    function selectManual(name) {
+      fillTarget({ name: name, unitFixed: false, registrationNumber: "", authEndDate: null, isZusatz: false, app: null });
     }
 
     // ----- Verdrahtung -----
-    document.getElementById("openSelectBtn").addEventListener("click", openModal);
     document.getElementById("selectModalClose").addEventListener("click", closeModal);
     modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeModal(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modalEl.hidden) closeModal(); });
@@ -1467,7 +1378,8 @@
       const term = mSearch.value.trim();
       clearTimeout(searchTimer);
       setModalMode("products");
-      if (term.length < 2) { renderStatus(IS_FILE ? "Nur online verfügbar." : "Mind. 2 Zeichen eingeben."); return; }
+      if (IS_FILE) { showIdleState(); return; }
+      if (term.length < 2) { showIdleState(); return; }
       searchTimer = setTimeout(() => runSearch(term), 280);
     });
     [mKultur, mSchadorg, mBBCH].forEach((s) => s.addEventListener("change", renderApps));
