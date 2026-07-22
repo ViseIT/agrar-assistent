@@ -428,6 +428,12 @@
     .badge--expired { background: rgba(184, 31, 30, 0.22); color: var(--mat-sys-error); }
     .chip-cat { font-size: var(--font-xs); padding: 1px 7px; border-radius: 4px; background: var(--mat-sys-surface-container-low); color: var(--mat-sys-on-surface-variant); }
     .primary-button--sm { padding: 6px 14px; }
+    /* Komponenten-Warnungen (Etappe 3): nur die Meldung farbig, Feld bleibt neutral */
+    .comp-warn { display: flex; flex-direction: column; gap: var(--spacing-xxs); margin-top: var(--spacing-xs); }
+    .comp-warn__msg { display: flex; align-items: flex-start; gap: var(--spacing-xs); font-size: var(--font-xs); line-height: 1.3; }
+    .comp-warn__msg svg { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; }
+    .comp-warn__msg--error { color: var(--mat-sys-error); }
+    .comp-warn__msg--warn { color: #ffc107; }
   </style>
 </head>
 <body>
@@ -833,13 +839,15 @@
         } else if (comp.fromModal) {
           nameField.innerHTML = `
             <input type="text" class="comp-name" value="${escapeHtml(comp.name)}" readonly aria-label="Komponente" />
-            <div class="field__hint comp-hint"></div>`;
+            <div class="field__hint comp-hint"></div>
+            <div class="comp-warn"></div>`;
         } else {
           nameField.innerHTML = `
             <input type="text" class="comp-name" placeholder="Bitte wählen" autocomplete="off"
                    spellcheck="false" aria-label="Komponente" value="${escapeHtml(comp.name)}" />
             <div class="autocomplete-panel"></div>
-            <div class="field__hint comp-hint"></div>`;
+            <div class="field__hint comp-hint"></div>
+            <div class="comp-warn"></div>`;
         }
 
         // Aufwandmenge + Einheit
@@ -898,6 +906,40 @@
       hint.classList.toggle("expired", expired && !!comp.registrationNumber);
     }
 
+    // ===== Warnungen je Komponente (Etappe 3): Feld bleibt neutral, nur die Meldung ist farbig =====
+    const ICON_WARN_TRI = "M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z";
+    const SIX_MONTHS_MS = 1000 * 60 * 60 * 24 * 183;
+    function renderWarnings() {
+      const waterComp = state.components.find((c) => c.isWater);
+      const waterRate = waterComp && waterComp.rate != null ? waterComp.rate : null; // Wasser-Zeile ist l/ha
+      state.components.forEach((comp) => {
+        if (comp.isWater) return;
+        const row = rowsEl.querySelector(`.calc-row[data-id="${comp.id}"]`);
+        const warnEl = row && row.querySelector(".comp-warn");
+        if (!warnEl) return;
+        const msgs = [];
+        if (comp.app) {
+          const unitLabel = (UNIT_BY_CODE[comp.unit] || UNIT_BY_CODE.L).label;
+          const appr = comp.app.approvedRate;
+          if (comp.rate != null && appr != null) {
+            if (comp.rate > appr) msgs.push(["error", "über zugelassener Höchstmenge (max. " + nfHa.format(appr) + " " + unitLabel + "/ha)"]);
+            else if (comp.rate < appr) msgs.push(["warn", "unter zugelassener Aufwandmenge " + nfHa.format(appr) + " " + unitLabel + "/ha — geringere Wirkung, Resistenzrisiko"]);
+          }
+          const wEin = comp.app.wEinheit;
+          if (waterRate != null && comp.app.wVon != null && comp.app.wBis != null && (!wEin || wEin === "LH") && (waterRate < comp.app.wVon || waterRate > comp.app.wBis)) {
+            msgs.push(["warn", "Wasser " + nfHa.format(waterRate) + " l/ha außerhalb Empfehlung " + nfHa.format(comp.app.wVon) + "–" + nfHa.format(comp.app.wBis) + " l/ha für dieses Mittel"]);
+          }
+        }
+        if (comp.authEndDate) {
+          if (isExpired(comp.authEndDate)) msgs.push(["error", "Zulassung abgelaufen"]);
+          else if (new Date(comp.authEndDate).getTime() - Date.now() < SIX_MONTHS_MS) msgs.push(["warn", "Zulassung läuft bald ab · " + formatBvlDate(comp.authEndDate)]);
+        }
+        warnEl.innerHTML = msgs.map(function (m) {
+          return '<div class="comp-warn__msg comp-warn__msg--' + m[0] + '">' + svgIcon(ICON_WARN_TRI) + '<span>' + escapeHtml(m[1]) + '</span></div>';
+        }).join("");
+      });
+    }
+
     // ===== Ergebnis rendern (bei jeder Eingabe) =====
     function renderResults() {
       const result = compute();
@@ -913,6 +955,8 @@
       });
 
       totalOverallEl.textContent = fmt(result.liquidTotalL, 0) || "0";
+
+      renderWarnings();
 
       // Ergebnis-Card nur zeigen, wenn es etwas anzuzeigen gibt; Drucken nur bei echter Aufteilung.
       const hasResult = result.fillings.length > 0 || result.bufferTooLarge || result.solidsOnly;
