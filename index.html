@@ -411,6 +411,12 @@
     .modal__filter input, .modal__filter select { width: 100%; background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface); border: none; border-bottom: 1px solid var(--mat-sys-on-surface-variant); border-radius: 6px 6px 0 0; padding: 10px 12px; font: inherit; }
     .modal__filter input:focus, .modal__filter select:focus { outline: none; border-bottom-color: var(--mat-sys-primary); }
     .modal__filter[hidden] { display: none; }
+    .modal__filter.ac { position: relative; }
+    .ac-menu { position: absolute; top: 100%; left: 0; right: 0; z-index: 6; margin-top: var(--spacing-xxs); background: var(--mat-sys-surface-container-highest); border: 1px solid var(--mat-sys-outline-variant); border-radius: var(--mat-sys-corner-small); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); max-height: 260px; overflow-y: auto; }
+    .ac-menu[hidden] { display: none; }
+    .ac-item { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--mat-sys-on-surface); font: inherit; padding: var(--spacing-s) var(--spacing-sm); cursor: pointer; }
+    .ac-item:hover, .ac-item--active { background: var(--mat-sys-surface-container-high); }
+    .ac-item small { color: var(--mat-sys-on-surface-variant); margin-left: var(--spacing-xs); }
     .modal__reset { background: none; border: none; color: var(--mat-sys-primary); font: inherit; cursor: pointer; padding: 8px; }
     .modal__reset[hidden] { display: none; }
     .modal__results { overflow-y: auto; padding: var(--spacing-s) var(--spacing-l) var(--spacing-l); display: flex; flex-direction: column; gap: var(--spacing-s); min-height: 120px; }
@@ -576,12 +582,20 @@
         <button type="button" class="modal__tab" data-mtype="zusatz" role="tab" aria-selected="false">Zusatzstoffe</button>
       </div>
       <div class="modal__filters">
-        <div class="modal__filter modal__filter--search">
-          <input type="text" id="mSearch" autocomplete="off" spellcheck="false" placeholder="Mittel suchen (mind. 2 Zeichen)" aria-label="Mittel suchen" />
+        <div class="modal__filter ac" id="mgKulturWrap">
+          <input type="text" id="mgKultur" autocomplete="off" spellcheck="false" placeholder="Kultur (z. B. Winterweizen)" aria-label="Kultur" />
+          <div class="ac-menu" id="mgKulturMenu" role="listbox" hidden></div>
         </div>
-        <div class="modal__filter" id="mKulturWrap" hidden><select id="mKultur" aria-label="Kultur"><option value="">Alle Kulturen</option></select></div>
-        <div class="modal__filter" id="mSchadorgWrap" hidden><select id="mSchadorg" aria-label="Schadorganismus"><option value="">Alle Schadorganismen</option></select></div>
+        <div class="modal__filter ac" id="mgSchadorgWrap">
+          <input type="text" id="mgSchadorg" autocomplete="off" spellcheck="false" placeholder="Schadorganismus (z. B. Blattläuse)" aria-label="Schadorganismus" />
+          <div class="ac-menu" id="mgSchadorgMenu" role="listbox" hidden></div>
+        </div>
+        <div class="modal__filter" id="mKulturWrap" hidden><select id="mKultur" aria-label="Kultur (Filter)"><option value="">Alle Kulturen</option></select></div>
+        <div class="modal__filter" id="mSchadorgWrap" hidden><select id="mSchadorg" aria-label="Schadorganismus (Filter)"><option value="">Alle Schadorganismen</option></select></div>
         <div class="modal__filter" id="mBBCHWrap" hidden><select id="mBBCH" aria-label="BBCH-Stadium"><option value="">Alle BBCH</option></select></div>
+        <div class="modal__filter modal__filter--search">
+          <input type="text" id="mSearch" autocomplete="off" spellcheck="false" placeholder="oder Mittelname suchen (mind. 2 Zeichen)" aria-label="Mittel suchen" />
+        </div>
         <button type="button" class="modal__reset" id="mReset" hidden>Filter zurücksetzen</button>
       </div>
       <div class="modal__results" id="mResults" aria-live="polite"></div>
@@ -1106,6 +1120,11 @@
     const mReset = document.getElementById("mReset");
     const mKultur = document.getElementById("mKultur"), mSchadorg = document.getElementById("mSchadorg"), mBBCH = document.getElementById("mBBCH");
     const filterWraps = ["mKulturWrap", "mSchadorgWrap", "mBBCHWrap"].map((id) => document.getElementById(id));
+    const mKulturWrap = filterWraps[0], mSchadorgWrap = filterWraps[1], mBBCHWrap = filterWraps[2];
+    const mgKultur = document.getElementById("mgKultur"), mgSchadorg = document.getElementById("mgSchadorg");
+    const mgKulturMenu = document.getElementById("mgKulturMenu"), mgSchadorgMenu = document.getElementById("mgSchadorgMenu");
+    const globalFilterWraps = [document.getElementById("mgKulturWrap"), document.getElementById("mgSchadorgWrap")];
+    const mittelCache = new Map();     // kennr -> {mittelname, kennr, zul_ende}
     let modalType = "psm";             // "psm" | "zusatz"
     let modalMode = "products";        // "products" | "apps"
     let currentApps = [];              // geladene Anwendungen des gewählten Produkts
@@ -1115,12 +1134,17 @@
     let modalTargetId = null;
     let selectedAwgId = null;
     let selectedZusatzKennr = null;
+    let filterKulturCode = null, filterKulturName = "";
+    let filterSchadorgCode = null, filterSchadorgName = "";
+    let currentGlobal = [];
+    let globalKey = "", globalNote = "";
 
     function openModal() {
       modalEl.hidden = false;
       document.body.style.overflow = "hidden";
       selectedAwgId = null; selectedZusatzKennr = null;
-      mSearch.value = ""; setModalMode("products"); setModalType("psm");
+      mSearch.value = ""; resetGlobalFilter();
+      setModalMode("products"); setModalType("psm");
       showIdleState();
       setTimeout(() => mSearch.focus(), 30);
     }
@@ -1148,19 +1172,37 @@
         t.classList.toggle("modal__tab--active", on);
         t.setAttribute("aria-selected", on ? "true" : "false");
       });
-      mSearch.placeholder = type === "psm" ? "Pflanzenschutzmittel suchen (mind. 2 Zeichen)" : "Zusatzstoff suchen (mind. 2 Zeichen)";
+      mSearch.placeholder = type === "psm" ? "oder Mittelname suchen (mind. 2 Zeichen)" : "Zusatzstoff suchen (mind. 2 Zeichen)";
       setModalMode("products");
       const term = mSearch.value.trim();
       if (term.length >= 2 && !IS_FILE) runSearch(term); else showIdleState();
     }
     function setModalMode(mode) {
       modalMode = mode;
-      const showFilters = mode === "apps";
-      filterWraps.forEach((w) => { w.hidden = !showFilters; });
-      mReset.hidden = !showFilters;
+      const isApps = mode === "apps";
+      const isGlobal = mode === "global";
+      // Globale Kultur/Schadorg-Autocompletes: überall außer in der Anwendungsansicht, nur im PSM-Tab.
+      const showGlobal = !isApps && modalType === "psm";
+      globalFilterWraps.forEach((w) => { w.hidden = !showGlobal; });
+      // Per-Produkt-Filter (Selects) nur in der Anwendungsansicht.
+      mKulturWrap.hidden = !isApps; mSchadorgWrap.hidden = !isApps;
+      // BBCH-Filter in der Anwendungsansicht und im globalen PSM-Modus.
+      mBBCHWrap.hidden = !(isApps || (isGlobal && modalType === "psm"));
+      mReset.hidden = !(isApps || isGlobal);
+    }
+    function resetGlobalFilter() {
+      mgKultur.value = ""; mgSchadorg.value = "";
+      mgKulturMenu.hidden = true; mgSchadorgMenu.hidden = true;
+      filterKulturCode = null; filterKulturName = "";
+      filterSchadorgCode = null; filterSchadorgName = "";
+      globalKey = ""; globalNote = "";
     }
     function renderStatus(text) { mResults.innerHTML = '<div class="modal__status">' + escapeHtml(text) + "</div>"; }
-    function showIdleState() { if (IS_FILE) renderManualEntry(); else renderStatus("Mind. 2 Zeichen eingeben, um zu suchen."); }
+    function showIdleState() {
+      if (IS_FILE) { renderManualEntry(); return; }
+      if (modalType === "psm") renderStatus("Kultur und Schadorganismus wählen – oder Mittelname eingeben (mind. 2 Zeichen).");
+      else renderStatus("Mind. 2 Zeichen eingeben, um zu suchen.");
+    }
     // Offline-Fallback: freie Namenseingabe, weil die BVL-Suche nur online funktioniert.
     function renderManualEntry() {
       mResults.innerHTML = '<div class="modal__status">Offline \u2013 die BVL-Suche ist nur online verfügbar. Mittel manuell eintragen:</div>';
@@ -1239,6 +1281,209 @@
       const result = apps.filter(Boolean);
       appCache.set(kennr, result);
       return result;
+    }
+
+    // ----- Produktübergreifende Suche (Kultur + Schadorganismus) -----
+    // Alle Seiten einer BVL-Liste holen (Paginierung via offset/hasMore).
+    async function bvlGetAll(path, qObj, signal, cap) {
+      const out = []; let offset = 0; const limit = 500;
+      for (;;) {
+        const q = encodeURIComponent(JSON.stringify(qObj));
+        const res = await fetch(BVL_BASE + "/" + path + "/?q=" + q + "&limit=" + limit + "&offset=" + offset, { signal });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        out.push(...(data.items || []));
+        if (!data.hasMore || out.length >= (cap || 4000)) break;
+        offset += limit;
+      }
+      return out;
+    }
+    async function resolveMittel(kennr, signal) {
+      if (mittelCache.has(kennr)) return mittelCache.get(kennr);
+      const arr = await bvlGet("mittel", { KENNR: kennr }, 1, signal).catch(() => []);
+      const p = arr[0]
+        ? { mittelname: arr[0].mittelname || kennr, kennr: kennr, zul_ende: arr[0].zul_ende || null }
+        : { mittelname: kennr, kennr: kennr, zul_ende: null };
+      mittelCache.set(kennr, p);
+      return p;
+    }
+    // Eine global gefundene Anwendung auflösen (Produkt, BBCH, Aufwand/Wasser).
+    async function resolveGlobalApp(awgId, signal) {
+      const kennr = awgId.split("/")[0];
+      const [awgArr, aufwand, product] = await Promise.all([
+        bvlGet("awg", { AWG_ID: awgId }, 1, signal).catch(() => []),
+        bvlGet("awg_aufwand", { AWG_ID: awgId }, 20, signal).catch(() => []),
+        resolveMittel(kennr, signal),
+      ]);
+      const awg = awgArr[0] || {};
+      const a0 = aufwand[0] || {};
+      return {
+        awgId: awgId, product: product,
+        kulturen: [filterKulturName], schadorgs: [filterSchadorgName],
+        bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
+        mAufwand: a0.m_aufwand != null ? a0.m_aufwand : null, mEinheit: a0.m_aufwand_einheit || null,
+        wVon: a0.w_aufwand_von != null ? a0.w_aufwand_von : null, wBis: a0.w_aufwand_bis != null ? a0.w_aufwand_bis : null, wEinheit: a0.w_aufwand_einheit || null,
+      };
+    }
+    async function runGlobalSearch() {
+      if (modalAbort) modalAbort.abort();
+      modalAbort = new AbortController();
+      const ctrl = modalAbort;
+      const to = setTimeout(() => ctrl.abort(), 60000);
+      setModalMode("global");
+      renderGlobalLoading();
+      try {
+        const [kuRows, scRows] = await Promise.all([
+          bvlGetAll("awg_kultur", { KULTUR: filterKulturCode }, ctrl.signal),
+          bvlGetAll("awg_schadorg", { SCHADORG: filterSchadorgCode }, ctrl.signal),
+        ]);
+        if (ctrl.signal.aborted) return;
+        const kuSet = new Set(kuRows.filter((r) => r.ausgenommen !== "J").map((r) => r.awg_id));
+        const seen = new Set();
+        const awgIds = scRows
+          .filter((r) => r.ausgenommen !== "J" && kuSet.has(r.awg_id) && !seen.has(r.awg_id) && seen.add(r.awg_id))
+          .map((r) => r.awg_id);
+        const CAP = 120;
+        globalNote = awgIds.length > CAP ? "Sehr viele Treffer (" + awgIds.length + ") – es werden die ersten " + CAP + " gezeigt. Bitte Filter verfeinern." : "";
+        const toResolve = awgIds.slice(0, CAP);
+        if (!toResolve.length) { currentGlobal = []; globalKey = filterKulturCode + "|" + filterSchadorgCode; renderGlobal(); return; }
+        const results = new Array(toResolve.length);
+        const CONCURRENCY = 8; let done = 0;
+        for (let start = 0; start < toResolve.length; start += CONCURRENCY) {
+          if (ctrl.signal.aborted) return;
+          const slice = toResolve.slice(start, start + CONCURRENCY);
+          await Promise.all(slice.map((id, j) =>
+            resolveGlobalApp(id, ctrl.signal)
+              .then((r) => { results[start + j] = r; })
+              .catch(() => { results[start + j] = null; })
+              .finally(() => { done++; updateGlobalProgress(done, toResolve.length); })
+          ));
+        }
+        if (ctrl.signal.aborted) return;
+        currentGlobal = results.filter(Boolean);
+        globalKey = filterKulturCode + "|" + filterSchadorgCode;
+        populateGlobalBBCH(currentGlobal);
+        renderGlobal();
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        renderStatus("Anwendungen konnten nicht geladen werden.");
+      } finally { clearTimeout(to); }
+    }
+    function renderGlobalLoading() {
+      mResults.innerHTML = "";
+      const prog = document.createElement("div");
+      prog.className = "modal__status"; prog.id = "mGlobalProgress";
+      prog.textContent = "Passende Anwendungen werden gesucht …";
+      mResults.appendChild(prog);
+      for (let i = 0; i < 5; i++) {
+        const sk = document.createElement("div");
+        sk.className = "result-row";
+        sk.innerHTML = '<div class="result-row__main"><div class="skel skel--line" style="width:50%"></div><div class="skel skel--line" style="width:75%;margin-top:6px"></div></div><div class="skel skel--btn"></div>';
+        mResults.appendChild(sk);
+      }
+    }
+    function updateGlobalProgress(done, total) {
+      const p = document.getElementById("mGlobalProgress");
+      if (p) p.textContent = "Passende Anwendungen werden geladen … (" + done + "/" + total + ")";
+    }
+    function populateGlobalBBCH(list) {
+      const bbch = new Set();
+      list.forEach((r) => { if (r.bbchVon || r.bbchBis) bbch.add(bbchLabel(r)); });
+      mBBCH.innerHTML = '<option value="">Alle BBCH</option>' + [...bbch].sort((a, b) => a.localeCompare(b, "de")).map((v) => '<option value="' + escapeHtml(v) + '">' + escapeHtml(v) + "</option>").join("");
+    }
+    function renderGlobal() {
+      const fb = mBBCH.value;
+      const list = currentGlobal
+        .filter((r) => !fb || bbchLabel(r) === fb)
+        .sort((a, b) => (a.product.mittelname || "").localeCompare(b.product.mittelname || "", "de"));
+      mResults.innerHTML = "";
+      const info = document.createElement("div");
+      info.className = "modal__status";
+      info.textContent = filterKulturName + " · " + filterSchadorgName + " — " + list.length + " Treffer";
+      mResults.appendChild(info);
+      if (globalNote) { const n = document.createElement("div"); n.className = "modal__status"; n.textContent = globalNote; mResults.appendChild(n); }
+      if (!list.length) {
+        const s = document.createElement("div"); s.className = "modal__status";
+        s.textContent = "Keine zugelassene Anwendung für diese Kombination.";
+        mResults.appendChild(s); return;
+      }
+      list.forEach((r) => {
+        const row = document.createElement("div");
+        row.className = "result-row";
+        row.innerHTML =
+          '<div class="result-row__main">' +
+          '<div class="result-row__name">' + escapeHtml(r.product.mittelname) + ' <span class="chip-cat">Zul.-Nr. ' + escapeHtml(r.product.kennr || "–") + "</span></div>" +
+          '<div class="app-grid">' +
+          "<span><b>Kultur:</b> " + escapeHtml(r.kulturen.join(", ") || "–") + "</span>" +
+          "<span><b>Schadorg.:</b> " + escapeHtml(r.schadorgs.join(", ") || "–") + "</span>" +
+          "</div><div class=\"app-grid\">" +
+          "<span><b>Aufwand:</b> " + escapeHtml(appRateText(r)) + "</span>" +
+          "<span><b>Wasser:</b> " + escapeHtml(appWaterText(r)) + "</span>" +
+          "<span><b>BBCH:</b> " + escapeHtml(bbchLabel(r)) + "</span>" +
+          "</div></div>" +
+          '<div class="result-row__action">' + statusBadge(r.product.zul_ende) + '<button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
+        row.querySelector("button").addEventListener("click", () => selectApplication(r.product, r));
+        mResults.appendChild(row);
+      });
+    }
+    // Zentrale Ergebnis-Steuerung: Mittelname (>=2) hat Vorrang, sonst globaler Filter, sonst Idle.
+    function updateResults() {
+      if (IS_FILE) { setModalMode("products"); showIdleState(); return; }
+      const term = mSearch.value.trim();
+      if (term.length >= 2) { runSearch(term); return; }
+      if (modalType === "psm" && filterKulturCode && filterSchadorgCode) {
+        const key = filterKulturCode + "|" + filterSchadorgCode;
+        if (key === globalKey && modalMode === "global") renderGlobal(); else runGlobalSearch();
+        return;
+      }
+      setModalMode("products"); showIdleState();
+    }
+    // Autocomplete für einen Kode-Filter (Kulturen 948 / Schadorganismen 947).
+    function setupAutocomplete(input, menu, kodeliste, onChange) {
+      let acTimer = null, acAbort = null, activeIdx = -1, items = [];
+      const hide = () => { menu.hidden = true; activeIdx = -1; };
+      const render = () => {
+        if (!items.length) { hide(); return; }
+        menu.innerHTML = "";
+        items.forEach((it) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "ac-item"; b.setAttribute("role", "option");
+          b.innerHTML = escapeHtml(it.kodetext) + ' <small>' + escapeHtml(it.kode) + "</small>";
+          b.addEventListener("mousedown", (e) => { e.preventDefault(); choose(it); });
+          menu.appendChild(b);
+        });
+        menu.hidden = false; activeIdx = -1;
+      };
+      const choose = (it) => { input.value = it.kodetext; hide(); onChange(it.kode, it.kodetext); };
+      input.addEventListener("input", () => {
+        onChange(null, "");
+        const term = input.value.trim();
+        clearTimeout(acTimer);
+        if (acAbort) acAbort.abort();
+        if (IS_FILE || term.length < 2) { hide(); return; }
+        acTimer = setTimeout(async () => {
+          acAbort = new AbortController();
+          try {
+            const rows = await bvlGet("kode", { KODELISTE: kodeliste, SPRACHE: "DE", KODETEXT: { $instr: term } }, 40, acAbort.signal);
+            const seen = new Set();
+            items = rows.filter((r) => r.kodetext && r.sperre !== "J" && !seen.has(r.kodetext) && seen.add(r.kodetext))
+              .sort((a, b) => a.kodetext.localeCompare(b.kodetext, "de")).slice(0, 30);
+            render();
+          } catch (e) { if (e.name !== "AbortError") hide(); }
+        }, 250);
+      });
+      input.addEventListener("keydown", (e) => {
+        if (menu.hidden) return;
+        const btns = menu.querySelectorAll(".ac-item");
+        if (e.key === "ArrowDown") { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, btns.length - 1); }
+        else if (e.key === "ArrowUp") { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); }
+        else if (e.key === "Enter") { if (activeIdx >= 0) { e.preventDefault(); choose(items[activeIdx]); } return; }
+        else if (e.key === "Escape") { hide(); return; }
+        else return;
+        btns.forEach((b, i) => b.classList.toggle("ac-item--active", i === activeIdx));
+        if (btns[activeIdx]) btns[activeIdx].scrollIntoView({ block: "nearest" });
+      });
+      input.addEventListener("blur", () => setTimeout(hide, 150));
     }
 
     // ----- Suche (Produkte bzw. Zusatzstoffe) -----
@@ -1343,6 +1588,12 @@
       if (b) return "bis " + b;
       return "–";
     }
+    function appRateText(a) {
+      return a.mAufwand != null ? fmt(a.mAufwand, Number.isInteger(a.mAufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[a.mEinheit] || a.mEinheit || "") : "–";
+    }
+    function appWaterText(a) {
+      return a.wVon != null ? fmt(a.wVon, 0) + (a.wBis != null && a.wBis !== a.wVon ? "–" + fmt(a.wBis, 0) : "") + " " + (BVL_UNIT_LABEL[a.wEinheit] || "l/ha") : "–";
+    }
     function populateFilters(apps) {
       const kult = new Set(), scha = new Set(), bbch = new Set();
       apps.forEach((a) => { a.kulturen.forEach((k) => kult.add(k)); a.schadorgs.forEach((s) => scha.add(s)); if (a.bbchVon || a.bbchBis) bbch.add(bbchLabel(a)); });
@@ -1371,8 +1622,8 @@
       mResults.appendChild(head);
       if (!list.length) { const s = document.createElement("div"); s.className = "modal__status"; s.textContent = "Keine Anwendung passt zu den Filtern."; mResults.appendChild(s); return; }
       list.forEach((a) => {
-        const rate = a.mAufwand != null ? fmt(a.mAufwand, Number.isInteger(a.mAufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[a.mEinheit] || a.mEinheit || "") : "–";
-        const water = a.wVon != null ? fmt(a.wVon, 0) + (a.wBis != null && a.wBis !== a.wVon ? "–" + fmt(a.wBis, 0) : "") + " " + (BVL_UNIT_LABEL[a.wEinheit] || "l/ha") : "–";
+        const rate = appRateText(a);
+        const water = appWaterText(a);
         const bbch = bbchLabel(a);
         const isSel = !!(selectedAwgId && a.awgId === selectedAwgId);
         const row = document.createElement("div");
@@ -1456,16 +1707,26 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !modalEl.hidden) closeModal(); });
     document.querySelectorAll(".modal__tab").forEach((t) => t.addEventListener("click", () => setModalType(t.dataset.mtype)));
     mSearch.addEventListener("input", () => {
-      const term = mSearch.value.trim();
       selectedAwgId = null; selectedZusatzKennr = null;
       clearTimeout(searchTimer);
-      setModalMode("products");
-      if (IS_FILE) { showIdleState(); return; }
-      if (term.length < 2) { showIdleState(); return; }
-      searchTimer = setTimeout(() => runSearch(term), 280);
+      searchTimer = setTimeout(updateResults, 280);
     });
-    [mKultur, mSchadorg, mBBCH].forEach((s) => s.addEventListener("change", renderApps));
-    mReset.addEventListener("click", () => { mKultur.value = ""; mSchadorg.value = ""; mBBCH.value = ""; renderApps(); });
+    [mKultur, mSchadorg].forEach((s) => s.addEventListener("change", renderApps));
+    mBBCH.addEventListener("change", () => { if (modalMode === "global") renderGlobal(); else renderApps(); });
+    mReset.addEventListener("click", () => {
+      if (modalMode === "global") {
+        resetGlobalFilter(); mBBCH.value = "";
+        setModalMode("products"); showIdleState();
+      } else {
+        mKultur.value = ""; mSchadorg.value = ""; mBBCH.value = ""; renderApps();
+      }
+    });
+    setupAutocomplete(mgKultur, mgKulturMenu, KODELISTE_KULTUR, (code, name) => {
+      filterKulturCode = code; filterKulturName = name; updateResults();
+    });
+    setupAutocomplete(mgSchadorg, mgSchadorgMenu, KODELISTE_SCHADORG, (code, name) => {
+      filterSchadorgCode = code; filterSchadorgName = name; updateResults();
+    });
 
     // ===== Start =====
     renderRows();
