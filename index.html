@@ -1634,6 +1634,9 @@
         currentApps = await loadApplications(product, ctrl.signal, updateLoadProgress);
         if (ctrl.signal.aborted) return;
         populateFilters(currentApps);
+        // Card-Kontext auf die Produkt-Filter übertragen (nur wenn das Produkt die Kultur/den Schadorg führt)
+        if (filterKulturName && [...mKultur.options].some((o) => o.value === filterKulturName)) mKultur.value = filterKulturName;
+        if (filterSchadorgName && [...mSchadorg.options].some((o) => o.value === filterSchadorgName)) mSchadorg.value = filterSchadorgName;
         setModalMode("apps");
         renderApps();
       } catch (err) {
@@ -1695,9 +1698,11 @@
 
     function renderApps() {
       const fk = mKultur.value, fs = mSchadorg.value, fb = mBBCH.value;
+      // Die aktuell gewählte Anwendung bleibt immer sichtbar (Abwählen), auch wenn sie nicht zum Card-/Filter-Kontext passt.
       const list = currentApps.filter((a) =>
-        (!fk || a.kulturen.includes(fk)) && (!fs || a.schadorgs.includes(fs)) &&
-        (!fb || bbchLabel(a) === fb));
+        (selectedAwgId && a.awgId === selectedAwgId) ||
+        ((!fk || a.kulturen.includes(fk)) && (!fs || a.schadorgs.includes(fs)) &&
+        (!fb || bbchLabel(a) === fb)));
       mResults.innerHTML = "";
       const back = document.createElement("button");
       back.type = "button"; back.className = "modal__back";
