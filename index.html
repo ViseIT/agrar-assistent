@@ -397,6 +397,8 @@
     /* ===== Auswahl-Modal: Mittel & Anwendung (Etappe 1) ===== */
     .modal-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 4vh var(--spacing-m); background: rgba(0, 0, 0, 0.62); overflow-y: auto; }
     .modal-overlay[hidden] { display: none; }
+    .modal--sm { max-width: 460px; }
+    .det-line-txt { font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); line-height: 1.5; }
     .modal { width: 100%; max-width: 960px; margin: auto; background: var(--mat-sys-surface-container-highest); border-radius: var(--mat-sys-corner-large); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; max-height: 92vh; }
     .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-m); padding: var(--spacing-m) var(--spacing-l); }
     .modal__head h2 { margin: 0; font-size: var(--font-xl); font-weight: var(--font-weight-semibold); }
@@ -813,9 +815,10 @@
     const ICON_SEARCH = "M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z";
     const ICON_CHEVRON = "M7 10l5 5 5-5z";
     const ICON_AREA = "M12 3 2 12h3v8h5v-6h4v6h5v-8h3z";
-    const ICON_WAIT = "M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4zM8 4v3l4 4 4-4V4z";
     const ICON_TECH = "M4 17a3 3 0 0 0 6 0h6a2 2 0 0 0 4 0h1v-4l-3-5h-4V4H3v9H2v4zm3-9h5v3H7z";
     const ICON_SECTOR = "M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5";
+    const ICON_WIRK = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4a6 6 0 1 1 0 12 6 6 0 0 1 0-12zm0 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6z";
+    const ICON_CLOSE = "M18.3 5.71 12 12l6.29 6.29-1.42 1.42L10.58 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.3 4.29l6.28 6.3 6.3-6.3z";
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1311,6 +1314,9 @@
       return '<span class="badge ' + cls + '">' + escapeHtml(label) + "</span>";
     }
 
+    // Aufwand-/Dosis-Helfer.
+    function doseRateText(d) { return fmt(d.rate, Number.isInteger(d.rate) ? 0 : 3) + " " + (BVL_UNIT_LABEL[d.einheit] || d.einheit || ""); }
+    function dosesSummary(doses) { return doses.length ? [...new Set(doses.map(doseRateText))].join(" / ") : null; }
     // Sub-Daten EINER Anwendung auflösen (Aufwand/Wasser, Kulturen, Schadorganismen).
     async function resolveOneApp(awg, signal) {
       const [aufwand, kulturen, schadorgs] = await Promise.all([
@@ -1321,8 +1327,10 @@
       const kNames = await Promise.all(kulturen.filter((k) => k.ausgenommen !== "J").map((k) => resolveKode(KODELISTE_KULTUR, k.kultur, signal)));
       const sNames = await Promise.all(schadorgs.filter((s) => s.ausgenommen !== "J").map((s) => resolveKode(KODELISTE_SCHADORG, s.schadorg, signal)));
       const a0 = aufwand[0] || {};
+      const doses = aufwand.filter((x) => x.m_aufwand != null).map((x) => ({ rate: x.m_aufwand, einheit: x.m_aufwand_einheit || null, aufwandbedingung: (x.aufwandbedingung || "").trim(), wVon: x.w_aufwand_von != null ? x.w_aufwand_von : null, wBis: x.w_aufwand_bis != null ? x.w_aufwand_bis : null, wEinheit: x.w_aufwand_einheit || null }));
       return {
         awgId: awg.awg_id,
+        doses: doses, doseSummary: dosesSummary(doses), wirkungsbereich: awg.wirkungsbereich || null,
         anwendungsbereich: awg.anwendungsbereich || null, anwendungstechnik: awg.anwendungstechnik || null, einsatzgebiet: awg.einsatzgebiet || null,
         kulturen: kNames, schadorgs: sNames,
         bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
@@ -1405,8 +1413,10 @@
       ]);
       const awg = awgArr[0] || {};
       const a0 = aufwand[0] || {};
+      const doses = aufwand.filter((x) => x.m_aufwand != null).map((x) => ({ rate: x.m_aufwand, einheit: x.m_aufwand_einheit || null, aufwandbedingung: (x.aufwandbedingung || "").trim(), wVon: x.w_aufwand_von != null ? x.w_aufwand_von : null, wBis: x.w_aufwand_bis != null ? x.w_aufwand_bis : null, wEinheit: x.w_aufwand_einheit || null }));
       return {
         awgId: awgId, product: product,
+        doses: doses, doseSummary: dosesSummary(doses), wirkungsbereich: awg.wirkungsbereich || null,
         anwendungsbereich: awg.anwendungsbereich || null, anwendungstechnik: awg.anwendungstechnik || null, einsatzgebiet: awg.einsatzgebiet || null,
         kulturen: [filterKulturName], schadorgs: [filterSchadorgName],
         bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
@@ -1505,13 +1515,13 @@
           '<div class="app-grid">' +
           "<span><b>Kultur:</b> " + escapeHtml(r.kulturen.join(", ") || "–") + "</span>" +
           "<span><b>Schadorg.:</b> " + escapeHtml(r.schadorgs.join(", ") || "–") + "</span>" +
-          "</div><div class=\"app-grid\">" +
-          "<span><b>Aufwand:</b> " + escapeHtml(appRateText(r)) + "</span>" +
+          '</div><div class="app-grid"><span><b>Aufwand:</b> ' + escapeHtml(appRateText(r)) + "</span></div>" +
+          '<div class="app-grid">' +
           "<span><b>Wasser:</b> " + escapeHtml(appWaterText(r)) + "</span>" +
           (bbchLabel(r) !== "–" ? "<span><b>BBCH:</b> " + escapeHtml(bbchLabel(r)) + "</span>" : "") +
           "</div></div>" +
           '<div class="result-row__action">' + statusBadge(r.product.zul_ende) + '<button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
-        row.querySelector("button").addEventListener("click", () => selectApplication(r.product, r));
+        row.querySelector("button").addEventListener("click", () => chooseApplication(r.product, r));
         attachAppDetail(row, r, r.product.kennr);
         mResults.appendChild(row);
       });
@@ -1713,6 +1723,7 @@
       return "–";
     }
     function appRateText(a) {
+      if (a.doseSummary) return a.doseSummary; // fasst mehrere Dosierungen zusammen (Details je Zeitpunkt im Panel)
       return a.mAufwand != null ? fmt(a.mAufwand, Number.isInteger(a.mAufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[a.mEinheit] || a.mEinheit || "") : "–";
     }
     function appWaterText(a) {
@@ -1729,54 +1740,37 @@
 
     // ---- Aufklappbare Anwendungs-Details (lazy geladen, gecacht) ----
     const appDetailCache = new Map();
-    const KL_BEREICH = 4, KL_TECHNIK = 27, KL_SEKTOR = 11, KL_WARTEZEIT = 89, KL_ZEITPUNKT = 30, KL_AUFLAGE = 74, KL_AUFWANDBED = 28;
+    const KL_BEREICH = 4, KL_TECHNIK = 27, KL_SEKTOR = 11, KL_WARTEZEIT = 89, KL_ZEITPUNKT = 30, KL_AUFLAGE = 74, KL_AUFWANDBED = 28, KL_WIRKBEREICH = 21, KL_EINHEIT = 25;
     const GHS_LABELS = { GHS01: "Explosiv", GHS02: "Entzündbar", GHS03: "Brandfördernd", GHS04: "Gas unter Druck", GHS05: "Ätzend", GHS06: "Giftig", GHS07: "Achtung", GHS08: "Gesundheitsgefahr", GHS09: "Umweltgefährlich" };
     async function renderAppDetail(app, kennr) {
       if (appDetailCache.has(app.awgId)) return appDetailCache.get(app.awgId);
       const id = app.awgId;
-      const [awArr, wzArr, zpArr, partners, pAufw, aufl, ghs] = await Promise.all([
-        bvlGet("awg_aufwand", { AWG_ID: id }, 20).catch(() => []),
+      const [wzArr, partners, pAufw, aufl, ghs, wgArr] = await Promise.all([
         bvlGet("awg_wartezeit", { AWG_ID: id }, 10).catch(() => []),
-        bvlGet("awg_zeitpunkt", { AWG_ID: id }, 10).catch(() => []),
         bvlGet("awg_partner", { AWG_ID: id }, 10).catch(() => []),
         bvlGet("awg_partner_aufwand", { AWG_ID: id }, 10).catch(() => []),
         bvlGet("auflagen", { ebene: id }, 60).catch(() => []),
         bvlGet("ghs_gefahrensymbole", { KENNR: kennr }, 20).catch(() => []),
+        bvlGet("wirkstoff_gehalt", { KENNR: kennr }, 20).catch(() => []),
       ]);
       const einsatz = await resolveKode(KL_BEREICH, app.anwendungsbereich);
       const technik = await resolveKode(KL_TECHNIK, app.anwendungstechnik);
       const sektor = await resolveKode(KL_SEKTOR, app.einsatzgebiet);
-      // Wartezeit: numerisch "X Tage", die häufige "abgedeckt"-Bemerkung kurz, sonst gekürzt.
+      const wirkbereich = await resolveKode(KL_WIRKBEREICH, app.wirkungsbereich);
+      // Wartezeit: numerisch "X Tage", sonst voller Bemerkungstext.
       let wartezeit = "";
       const wz = wzArr[0];
       if (wz) {
         if (wz.gesetzt_wartezeit != null && String(wz.gesetzt_wartezeit).trim() !== "") wartezeit = wz.gesetzt_wartezeit + " Tage";
-        else if (wz.gesetzt_wartezeit_bem) {
-          const t = await resolveKode(KL_WARTEZEIT, wz.gesetzt_wartezeit_bem);
-          if (/vegetationszeit/i.test(t)) wartezeit = "durch Vegetationszeit abgedeckt";
-          else if (/nicht erforderlich|keine wartezeit/i.test(t)) wartezeit = "keine Wartezeit";
-          else wartezeit = t.length > 60 ? t.slice(0, 60).replace(/\s+\S*$/, "") + " …" : t;
-        }
+        else if (wz.gesetzt_wartezeit_bem) wartezeit = await resolveKode(KL_WARTEZEIT, wz.gesetzt_wartezeit_bem);
       }
-      // Zeitpunkt-Namen je sortier_nr (für die Verknüpfung mit den Dosierungen).
-      const zpNameBySort = {};
-      await Promise.all(zpArr.map(async (z) => { zpNameBySort[z.sortier_nr] = await resolveKode(KL_ZEITPUNKT, z.zeitpunkt); }));
-      const zpAll = zpArr.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0)).map((z) => zpNameBySort[z.sortier_nr]).filter(Boolean).join(", ");
-      // Dosierung(en): je awg_aufwand-Zeile, ggf. mit Zeitpunkt (aufwandbedingung ZTP<n> -> zeitpunkt sortier_nr n).
-      const dosen = [];
-      for (const r of awArr.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0))) {
-        if (r.m_aufwand == null) continue;
-        const rate = fmt(r.m_aufwand, Number.isInteger(r.m_aufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[r.m_aufwand_einheit] || r.m_aufwand_einheit || "");
-        const ab = (r.aufwandbedingung || "").trim();
-        let label = "";
-        if (ab) {
-          const abText = await resolveKode(KL_AUFWANDBED, ab);
-          const zpName = zpNameBySort[parseInt(ab.replace(/\D/g, ""), 10)];
-          label = abText + (zpName ? " (" + zpName + ")" : "");
-        } else {
-          label = zpAll;
-        }
-        dosen.push({ label: label, rate: rate });
+      // Wirkstoffe (Name je wirknr, Gehalt + Einheit)
+      const wsList = [];
+      for (const w of wgArr) {
+        const name = await resolveWirkstoff(w.wirknr);
+        const gehalt = w.gehalt_rein_grundstruktur != null && w.gehalt_rein_grundstruktur !== 0 ? w.gehalt_rein_grundstruktur : (w.gehalt_rein != null && w.gehalt_rein !== 0 ? w.gehalt_rein : null);
+        const einh = w.gehalt_einheit ? await resolveKode(KL_EINHEIT, w.gehalt_einheit) : "";
+        wsList.push(escapeHtml(name + (gehalt != null ? " (" + fmt(gehalt, Number.isInteger(gehalt) ? 0 : 1) + (einh ? " " + einh : "") + ")" : "")));
       }
       // Zusatzstoffe / Partner
       const partnerHtml = [];
@@ -1798,9 +1792,10 @@
       const ghsHtml = ghs.map((g) => g.gefahrensymbol).filter(Boolean).map((c) =>
         '<span class="ghs-badge"><span class="dia"></span>' + escapeHtml(c + (GHS_LABELS[c] ? " " + GHS_LABELS[c] : "")) + "</span>").join("");
       const item = (icon, k, v) => v ? '<div class="det-item">' + svgIcon(icon) + '<div><div class="det-k">' + k + '</div><div class="det-v">' + escapeHtml(v) + "</div></div></div>" : "";
-      const grid = item(ICON_AREA, "Einsatzgebiet", einsatz) + item(ICON_WAIT, "Wartezeit", wartezeit) + item(ICON_TECH, "Technik", technik) + item(ICON_SECTOR, "Sektor", sektor);
+      const grid = item(ICON_AREA, "Einsatzgebiet", einsatz) + item(ICON_WIRK, "Wirkungsbereich", wirkbereich) + item(ICON_TECH, "Technik", technik) + item(ICON_SECTOR, "Sektor", sektor);
       let html = grid ? '<div class="det-grid">' + grid + "</div>" : "";
-      if (dosen.length) html += '<div><div class="det-sec-title">Dosierung</div>' + dosen.map((d) => '<div class="det-dose">' + (d.label ? '<span class="det-k">' + escapeHtml(d.label) + '</span> ' : "") + "<b>" + escapeHtml(d.rate) + "</b></div>").join("") + "</div>";
+      if (wsList.length) html += '<div><div class="det-sec-title">Wirkstoffe</div><div class="det-v">' + wsList.join(", ") + "</div></div>";
+      if (wartezeit) html += '<div><div class="det-sec-title">Wartezeit</div><div class="det-line-txt">' + escapeHtml(wartezeit) + "</div></div>";
       if (partnerHtml.length) html += '<div><div class="det-sec-title">Zusatzstoffe</div><div>' + partnerHtml.join(" ") + "</div></div>";
       if (auflItems.length) html += '<div><div class="det-sec-title">Auflagen &amp; Abstände</div><ul class="det-auflagen">' + auflItems.map((a) => "<li><b>" + escapeHtml(a.code) + ":</b> " + escapeHtml(a.text) + "</li>").join("") + "</ul></div>";
       if (ghsHtml) html += '<div><div class="det-sec-title">Warnzeichen</div><div class="ghs">' + ghsHtml + "</div></div>";
@@ -1871,13 +1866,13 @@
           '<div class="app-grid">' +
           "<span><b>Kultur:</b> " + escapeHtml(a.kulturen.join(", ") || "–") + "</span>" +
           "<span><b>Schadorg.:</b> " + escapeHtml(a.schadorgs.join(", ") || "–") + "</span>" +
-          "</div><div class=\"app-grid\">" +
-          "<span><b>Aufwand:</b> " + escapeHtml(rate) + "</span>" +
+          '</div><div class="app-grid"><span><b>Aufwand:</b> ' + escapeHtml(rate) + "</span></div>" +
+          '<div class="app-grid">' +
           "<span><b>Wasser:</b> " + escapeHtml(water) + "</span>" +
           (bbch !== "–" ? "<span><b>BBCH:</b> " + escapeHtml(bbch) + "</span>" : "") +
           "</div></div>" +
           '<div class="result-row__action"><button type="button" class="' + (isSel ? "secondary-button secondary-button--sm" : "primary-button primary-button--sm") + '">' + (isSel ? "Abwählen" : "Auswählen") + '</button></div>';
-        row.querySelector("button").addEventListener("click", () => isSel ? deselectTarget() : selectApplication(currentProduct, a));
+        row.querySelector("button").addEventListener("click", () => isSel ? deselectTarget() : chooseApplication(currentProduct, a));
         attachAppDetail(row, a, currentProduct.kennr);
         mResults.appendChild(row);
       });
@@ -1913,23 +1908,81 @@
     function deselectTarget() {
       fillTarget({ name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null, isZusatz: false, isWater: false, app: null });
     }
-    function selectApplication(product, app) {
-      const unit = BVL_UNIT_MAP[app.mEinheit] || "L";
-      // Wasserabhängige Anwendung (hat einen Wasseraufwand) → Wasser automatisch als erste Komponente ergänzen.
-      if (app.wVon != null && !state.components.some((c) => c.isWater)) {
-        state.components.unshift({ id: uid(), isWater: true, name: "Wasser", unit: "L", rate: app.wVon, unitFixed: false, registrationNumber: "", authEndDate: null });
+    const wirkstoffCache = new Map();
+    async function resolveWirkstoff(wirknr) {
+      if (!wirknr) return "";
+      if (wirkstoffCache.has(wirknr)) return wirkstoffCache.get(wirknr);
+      const arr = await bvlGet("wirkstoff", { wirknr: wirknr }, 1).catch(() => []);
+      const name = (arr[0] && arr[0].wirkstoffname) || wirknr;
+      wirkstoffCache.set(wirknr, name);
+      return name;
+    }
+    // Bei mehreren Dosierungen erst den Auswahl-Dialog öffnen, sonst direkt übernehmen.
+    function chooseApplication(product, app) {
+      if (app.doses && app.doses.length > 1) openDosePicker(product, app);
+      else selectApplication(product, app, app.doses && app.doses[0]);
+    }
+    const dosesCache = new Map();
+    async function resolveDoses(app) {
+      if (dosesCache.has(app.awgId)) return dosesCache.get(app.awgId);
+      const zp = await bvlGet("awg_zeitpunkt", { AWG_ID: app.awgId }, 10).catch(() => []);
+      const zpNameBySort = {};
+      await Promise.all(zp.map(async (z) => { zpNameBySort[z.sortier_nr] = await resolveKode(KL_ZEITPUNKT, z.zeitpunkt); }));
+      const zpAll = zp.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0)).map((z) => zpNameBySort[z.sortier_nr]).filter(Boolean).join(", ");
+      const out = [];
+      for (const d of app.doses || []) {
+        let label = "";
+        if (d.aufwandbedingung) {
+          const abText = await resolveKode(KL_AUFWANDBED, d.aufwandbedingung);
+          const zpName = zpNameBySort[parseInt(d.aufwandbedingung.replace(/\D/g, ""), 10)];
+          label = abText + (zpName ? " (" + zpName + ")" : "");
+        } else { label = zpAll; }
+        out.push({ label: label, rate: doseRateText(d), dose: d });
+      }
+      dosesCache.set(app.awgId, out);
+      return out;
+    }
+    function openDosePicker(product, app) {
+      const ov = document.createElement("div");
+      ov.className = "modal-overlay no-print";
+      ov.innerHTML = '<div class="modal modal--sm" role="dialog" aria-modal="true" aria-labelledby="dpTitle"><div class="modal__head"><h2 id="dpTitle">Dosierung wählen</h2><button type="button" class="icon-button" aria-label="Schließen">' + svgIcon(ICON_CLOSE) + '</button></div><div class="modal__results" id="dpResults"><div class="modal__status">Wird geladen …</div></div></div>';
+      document.body.appendChild(ov);
+      const close = () => { ov.remove(); document.removeEventListener("keydown", onKey, true); };
+      const onKey = (e) => { if (e.key === "Escape") { e.stopImmediatePropagation(); close(); } }; // nur den Picker schließen, nicht das Haupt-Modal
+      document.addEventListener("keydown", onKey, true);
+      ov.addEventListener("click", (e) => { if (e.target === ov) close(); });
+      ov.querySelector(".icon-button").addEventListener("click", close);
+      resolveDoses(app).then((list) => {
+        const res = ov.querySelector("#dpResults");
+        if (!res) return;
+        res.innerHTML = "";
+        list.forEach((d) => {
+          const row = document.createElement("div");
+          row.className = "result-row";
+          row.innerHTML = '<div class="result-row__main"><div class="result-row__name">' + escapeHtml(d.rate) + "</div>" + (d.label ? '<div class="result-row__meta">' + escapeHtml(d.label) + "</div>" : "") + '</div><div class="result-row__action"><button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
+          row.querySelector("button").addEventListener("click", () => { close(); selectApplication(product, app, d.dose); });
+          res.appendChild(row);
+        });
+      }).catch(() => { const res = ov.querySelector("#dpResults"); if (res) res.innerHTML = '<div class="modal__status">Dosierungen nicht verfügbar.</div>'; });
+    }
+    function selectApplication(product, app, dose) {
+      const d = dose || (app.doses && app.doses[0]) || { rate: app.mAufwand, einheit: app.mEinheit, wVon: app.wVon, wBis: app.wBis, wEinheit: app.wEinheit };
+      const unit = BVL_UNIT_MAP[d.einheit] || "L";
+      // Wasserabhängige Anwendung → Wasser automatisch als erste Komponente ergänzen (mit Mindest-Wassermenge der gewählten Dosierung).
+      if (d.wVon != null && !state.components.some((c) => c.isWater)) {
+        state.components.unshift({ id: uid(), isWater: true, name: "Wasser", unit: "L", rate: d.wVon, unitFixed: false, registrationNumber: "", authEndDate: null });
       }
       fillTarget({
         name: product.mittelname, unit: unit,
-        rate: app.mAufwand != null ? app.mAufwand : null, unitFixed: true,
+        rate: d.rate != null ? d.rate : null, unitFixed: true,
         registrationNumber: product.kennr || "", authEndDate: product.zul_ende || null,
         isZusatz: false,
         app: {
           awgId: app.awgId || null,
           kulturen: app.kulturen || [], schadorgs: app.schadorgs || [],
           bbchVon: app.bbchVon || null, bbchBis: app.bbchBis || null,
-          approvedRate: app.mAufwand != null ? app.mAufwand : null, approvedUnit: unit,
-          wVon: app.wVon != null ? app.wVon : null, wBis: app.wBis != null ? app.wBis : null, wEinheit: app.wEinheit || null,
+          approvedRate: d.rate != null ? d.rate : null, approvedUnit: unit,
+          wVon: d.wVon != null ? d.wVon : null, wBis: d.wBis != null ? d.wBis : null, wEinheit: d.wEinheit || null,
         },
       });
       addMandatoryPartner(app, product.mittelname);
