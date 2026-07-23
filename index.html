@@ -947,6 +947,7 @@
       const hint = nameField.querySelector(".comp-hint");
       if (!hint) return;
       const parts = [];
+      if (comp.mandatory) parts.push("Pflichtmischung" + (comp.mandatoryWith ? " mit " + comp.mandatoryWith : ""));
       if (comp.app) {
         if (comp.app.kulturen && comp.app.kulturen.length) parts.push(comp.app.kulturen.join(", "));
         if (comp.app.schadorgs && comp.app.schadorgs.length) parts.push(comp.app.schadorgs.join(", "));
@@ -1788,6 +1789,33 @@
           wVon: app.wVon != null ? app.wVon : null, wBis: app.wBis != null ? app.wBis : null, wEinheit: app.wEinheit || null,
         },
       });
+      addMandatoryPartner(app, product.mittelname);
+    }
+    // Vorgeschriebene Mischung (mischung_art "KV") automatisch als Komponente ergänzen (nach dem Schließen).
+    async function addMandatoryPartner(app, withName) {
+      if (!app.awgId || IS_FILE) return;
+      try {
+        const partners = await bvlGet("awg_partner", { AWG_ID: app.awgId }, 10);
+        const mandatory = partners.filter((p) => (p.mischung_art || "").trim() === "KV" && p.partner_kennr);
+        if (!mandatory.length) return;
+        const aufw = await bvlGet("awg_partner_aufwand", { AWG_ID: app.awgId }, 10).catch(() => []);
+        for (const m of mandatory) {
+          if (state.components.some((c) => c.registrationNumber === m.partner_kennr)) continue;
+          const a0 = aufw.find((x) => x.partner_kennr === m.partner_kennr) || {};
+          const zus = await bvlGet("zusatzstoff", { KENNR: m.partner_kennr }, 1).catch(() => []);
+          let name = m.partner_kennr, end = null, isZ = false;
+          if (zus[0]) { name = zus[0].mittelname; end = zus[0].genehmigungsende; isZ = true; }
+          else { const mit = await bvlGet("mittel", { KENNR: m.partner_kennr }, 1).catch(() => []); if (mit[0]) { name = mit[0].mittelname; end = mit[0].zul_ende; } }
+          state.components.push({
+            id: uid(), isWater: false, isZusatz: isZ, name: name,
+            unit: BVL_UNIT_MAP[a0.m_aufwand_einheit] || "L",
+            rate: a0.m_aufwand != null ? a0.m_aufwand : null, unitFixed: a0.m_aufwand != null,
+            registrationNumber: m.partner_kennr, authEndDate: end || null, app: null,
+            mandatory: true, mandatoryWith: withName || "",
+          });
+        }
+        renderRows();
+      } catch (e) { /* Pflicht-Partner ist Zusatzinfo; Fehler nicht blockierend */ }
     }
     function selectZusatz(z) {
       fillTarget({
