@@ -455,6 +455,25 @@
     .badge--soon { background: rgba(255, 193, 7, 0.15); color: #ffc107; }
     .badge--expired { background: rgba(184, 31, 30, 0.22); color: var(--mat-sys-error); }
     .chip-cat { font-size: var(--font-xs); padding: 1px 7px; border-radius: 4px; background: var(--mat-sys-surface-container-low); color: var(--mat-sys-on-surface-variant); }
+    .result-row--app { flex-direction: column; align-items: stretch; }
+    .result-row__top { display: flex; gap: var(--spacing-m); align-items: center; justify-content: space-between; }
+    .app-detoggle { background: none; border: none; color: var(--mat-sys-primary); font: inherit; cursor: pointer; padding: var(--spacing-xs) 0; display: inline-flex; align-items: center; gap: var(--spacing-xs); align-self: flex-start; }
+    .app-detoggle svg { width: 18px; height: 18px; transition: transform 0.15s; }
+    .app-detoggle--open svg { transform: rotate(180deg); }
+    .app-detail { margin-top: var(--spacing-s); padding-top: var(--spacing-s); border-top: 1px solid var(--mat-sys-outline-variant); display: flex; flex-direction: column; gap: var(--spacing-m); }
+    .det-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--spacing-s) var(--spacing-m); }
+    .det-item { display: flex; gap: var(--spacing-s); }
+    .det-item svg { width: 18px; height: 18px; color: var(--mat-sys-on-surface-variant); flex: 0 0 auto; margin-top: 2px; }
+    .det-k { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); }
+    .det-v { font-weight: var(--font-weight-medium); }
+    .det-sec-title { font-size: var(--font-xs); letter-spacing: 0.04em; text-transform: uppercase; color: var(--mat-sys-on-surface-variant); margin-bottom: var(--spacing-xxs); }
+    .det-partner { color: var(--mat-sys-primary); font-weight: var(--font-weight-semibold); margin-right: var(--spacing-xs); }
+    .det-auflagen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-xs); }
+    .det-auflagen li { font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); line-height: 1.4; }
+    .det-auflagen b { color: var(--mat-sys-on-surface); font-weight: var(--font-weight-medium); }
+    .ghs { display: flex; gap: var(--spacing-s); flex-wrap: wrap; }
+    .ghs-badge { display: inline-flex; align-items: center; gap: var(--spacing-xs); border: 1px solid var(--mat-sys-error); color: var(--mat-sys-on-surface); border-radius: var(--mat-sys-corner-small); padding: 2px 8px; font-size: var(--font-xs); }
+    .ghs-badge .dia { width: 12px; height: 12px; transform: rotate(45deg); border: 2px solid var(--mat-sys-error); display: inline-block; flex: 0 0 auto; }
     .skel { background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%); background-size: 200% 100%; animation: skel-shimmer 1.3s ease-in-out infinite; border-radius: var(--mat-sys-corner-small); }
     .skel--line { height: 12px; }
     .skel--btn { width: 96px; height: 32px; flex: 0 0 auto; }
@@ -789,6 +808,12 @@
     }
     const ICON_DELETE = "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z";
     const ICON_SEARCH = "M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z";
+    const ICON_CHEVRON = "M7 10l5 5 5-5z";
+    const ICON_AREA = "M12 3 2 12h3v8h5v-6h4v6h5v-8h3z";
+    const ICON_WAIT = "M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4zM8 4v3l4 4 4-4V4z";
+    const ICON_TECH = "M4 17a3 3 0 0 0 6 0h6a2 2 0 0 0 4 0h1v-4l-3-5h-4V4H3v9H2v4zm3-9h5v3H7z";
+    const ICON_SECTOR = "M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5";
+    const ICON_TIME = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 11h-4v-2h2V7h2z";
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1296,6 +1321,7 @@
       const a0 = aufwand[0] || {};
       return {
         awgId: awg.awg_id,
+        anwendungsbereich: awg.anwendungsbereich || null, anwendungstechnik: awg.anwendungstechnik || null, einsatzgebiet: awg.einsatzgebiet || null,
         kulturen: kNames, schadorgs: sNames,
         bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
         mAufwand: a0.m_aufwand != null ? a0.m_aufwand : null, mEinheit: a0.m_aufwand_einheit || null,
@@ -1379,6 +1405,7 @@
       const a0 = aufwand[0] || {};
       return {
         awgId: awgId, product: product,
+        anwendungsbereich: awg.anwendungsbereich || null, anwendungstechnik: awg.anwendungstechnik || null, einsatzgebiet: awg.einsatzgebiet || null,
         kulturen: [filterKulturName], schadorgs: [filterSchadorgName],
         bbchVon: awg.stadium_kultur_von || null, bbchBis: awg.stadium_kultur_bis || null,
         mAufwand: a0.m_aufwand != null ? a0.m_aufwand : null, mEinheit: a0.m_aufwand_einheit || null,
@@ -1483,6 +1510,7 @@
           "</div></div>" +
           '<div class="result-row__action">' + statusBadge(r.product.zul_ende) + '<button type="button" class="primary-button primary-button--sm">Auswählen</button></div>';
         row.querySelector("button").addEventListener("click", () => selectApplication(r.product, r));
+        attachAppDetail(row, r, r.product.kennr);
         mResults.appendChild(row);
       });
     }
@@ -1697,6 +1725,95 @@
       fill(mKultur, kult, "Alle Kulturen"); fill(mSchadorg, scha, "Alle Schadorganismen"); fill(mBBCH, bbch, "Alle BBCH");
     }
 
+    // ---- Aufklappbare Anwendungs-Details (lazy geladen, gecacht) ----
+    const appDetailCache = new Map();
+    const KL_BEREICH = 4, KL_TECHNIK = 27, KL_SEKTOR = 11, KL_WARTEZEIT = 89, KL_ZEITPUNKT = 30, KL_AUFLAGE = 74;
+    const GHS_LABELS = { GHS01: "Explosiv", GHS02: "Entzündbar", GHS03: "Brandfördernd", GHS04: "Gas unter Druck", GHS05: "Ätzend", GHS06: "Giftig", GHS07: "Achtung", GHS08: "Gesundheitsgefahr", GHS09: "Umweltgefährlich" };
+    async function renderAppDetail(app, kennr) {
+      if (appDetailCache.has(app.awgId)) return appDetailCache.get(app.awgId);
+      const id = app.awgId;
+      const [wzArr, zpArr, partners, pAufw, aufl, ghs] = await Promise.all([
+        bvlGet("awg_wartezeit", { AWG_ID: id }, 10).catch(() => []),
+        bvlGet("awg_zeitpunkt", { AWG_ID: id }, 10).catch(() => []),
+        bvlGet("awg_partner", { AWG_ID: id }, 10).catch(() => []),
+        bvlGet("awg_partner_aufwand", { AWG_ID: id }, 10).catch(() => []),
+        bvlGet("auflagen", { ebene: id }, 60).catch(() => []),
+        bvlGet("ghs_gefahrensymbole", { KENNR: kennr }, 20).catch(() => []),
+      ]);
+      const einsatz = await resolveKode(KL_BEREICH, app.anwendungsbereich);
+      const technik = await resolveKode(KL_TECHNIK, app.anwendungstechnik);
+      const sektor = await resolveKode(KL_SEKTOR, app.einsatzgebiet);
+      let wartezeit = "";
+      const wz = wzArr[0];
+      if (wz) {
+        if (wz.gesetzt_wartezeit != null && String(wz.gesetzt_wartezeit).trim() !== "") wartezeit = wz.gesetzt_wartezeit + " Tage";
+        else if (wz.gesetzt_wartezeit_bem) wartezeit = await resolveKode(KL_WARTEZEIT, wz.gesetzt_wartezeit_bem);
+      }
+      const zpNames = (await Promise.all(
+        zpArr.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0)).map((z) => resolveKode(KL_ZEITPUNKT, z.zeitpunkt))
+      )).filter(Boolean);
+      // Zusatzstoffe / Partner
+      const partnerHtml = [];
+      for (const p of partners) {
+        if (!p.partner_kennr) continue;
+        const pa = pAufw.find((x) => x.partner_kennr === p.partner_kennr) || {};
+        const zus = await bvlGet("zusatzstoff", { KENNR: p.partner_kennr }, 1).catch(() => []);
+        let name = zus[0] ? zus[0].mittelname : p.partner_kennr;
+        if (!zus[0]) { const mit = await bvlGet("mittel", { KENNR: p.partner_kennr }, 1).catch(() => []); if (mit[0]) name = mit[0].mittelname; }
+        const dose = pa.m_aufwand != null ? " (" + fmt(pa.m_aufwand, Number.isInteger(pa.m_aufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[pa.m_aufwand_einheit] || pa.m_aufwand_einheit || "") + ")" : "";
+        const pflicht = (p.mischung_art || "").trim() === "KV" ? ' <span class="badge badge--soon">Pflichtmischung</span>' : "";
+        partnerHtml.push('<span class="det-partner">' + escapeHtml(name + dose) + "</span>" + pflicht);
+      }
+      // Auflagen & Abstände (nur Naturhaushalt: Wasser/Terr./Bienen), Text gekürzt
+      const auflItems = [];
+      for (const code of aufl.map((x) => x.auflage).filter((c) => c && /^N[WTB]/.test(c))) {
+        let t = await resolveKode(KL_AUFLAGE, code);
+        if (t && t.length > 170) t = t.slice(0, 170).replace(/\s+\S*$/, "") + " …";
+        auflItems.push({ code: code, text: t });
+      }
+      const ghsHtml = ghs.map((g) => g.gefahrensymbol).filter(Boolean).map((c) =>
+        '<span class="ghs-badge"><span class="dia"></span>' + escapeHtml(c + (GHS_LABELS[c] ? " " + GHS_LABELS[c] : "")) + "</span>").join("");
+      const item = (icon, k, v) => v ? '<div class="det-item">' + svgIcon(icon) + '<div><div class="det-k">' + k + '</div><div class="det-v">' + escapeHtml(v) + "</div></div></div>" : "";
+      const grid = item(ICON_AREA, "Einsatzgebiet", einsatz) + item(ICON_WAIT, "Wartezeit", wartezeit) + item(ICON_TECH, "Technik", technik) + item(ICON_SECTOR, "Sektor", sektor) + item(ICON_TIME, "Zeitpunkt", zpNames.join(", "));
+      let html = grid ? '<div class="det-grid">' + grid + "</div>" : "";
+      if (partnerHtml.length) html += '<div><div class="det-sec-title">Zusatzstoffe</div><div>' + partnerHtml.join(" ") + "</div></div>";
+      if (auflItems.length) html += '<div><div class="det-sec-title">Auflagen &amp; Abstände</div><ul class="det-auflagen">' + auflItems.map((a) => "<li><b>" + escapeHtml(a.code) + ":</b> " + escapeHtml(a.text) + "</li>").join("") + "</ul></div>";
+      if (ghsHtml) html += '<div><div class="det-sec-title">Warnzeichen</div><div class="ghs">' + ghsHtml + "</div></div>";
+      if (!html) html = '<div class="modal__status">Keine weiteren Angaben.</div>';
+      appDetailCache.set(app.awgId, html);
+      return html;
+    }
+    function attachAppDetail(row, app, kennr) {
+      if (!app || !app.awgId) return;
+      row.classList.add("result-row--app");
+      const top = document.createElement("div");
+      top.className = "result-row__top";
+      while (row.firstChild) top.appendChild(row.firstChild);
+      row.appendChild(top);
+      const toggle = document.createElement("button");
+      toggle.type = "button"; toggle.className = "app-detoggle"; toggle.setAttribute("aria-expanded", "false");
+      toggle.innerHTML = svgIcon(ICON_CHEVRON) + "<span>Details</span>";
+      const panel = document.createElement("div");
+      panel.className = "app-detail"; panel.hidden = true;
+      let loaded = false;
+      const setOpen = (open) => {
+        panel.hidden = !open;
+        toggle.classList.toggle("app-detoggle--open", open);
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        toggle.querySelector("span").textContent = open ? "Details ausblenden" : "Details";
+      };
+      toggle.addEventListener("click", async () => {
+        if (!panel.hidden) { setOpen(false); return; }
+        setOpen(true);
+        if (loaded) return;
+        panel.innerHTML = '<div class="modal__status">Details werden geladen …</div>';
+        try { panel.innerHTML = await renderAppDetail(app, kennr); }
+        catch (e) { panel.innerHTML = '<div class="modal__status">Details nicht verfügbar.</div>'; }
+        loaded = true;
+      });
+      row.appendChild(toggle);
+      row.appendChild(panel);
+    }
     function renderApps() {
       const fk = mKultur.value, fs = mSchadorg.value, fb = mBBCH.value;
       // Die aktuell gewählte Anwendung bleibt immer sichtbar (Abwählen), auch wenn sie nicht zum Card-/Filter-Kontext passt.
@@ -1736,6 +1853,7 @@
           "</div></div>" +
           '<div class="result-row__action"><button type="button" class="' + (isSel ? "secondary-button secondary-button--sm" : "primary-button primary-button--sm") + '">' + (isSel ? "Abwählen" : "Auswählen") + '</button></div>';
         row.querySelector("button").addEventListener("click", () => isSel ? deselectTarget() : selectApplication(currentProduct, a));
+        attachAppDetail(row, a, currentProduct.kennr);
         mResults.appendChild(row);
       });
       if (selectedAwgId) { const sel = mResults.querySelector(".result-row--selected"); if (sel) sel.scrollIntoView({ block: "center" }); }
