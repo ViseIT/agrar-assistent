@@ -1143,6 +1143,7 @@
     const globalFilterWraps = [document.getElementById("mgKulturWrap"), document.getElementById("mgSchadorgWrap")];
     const mittelCache = new Map();     // kennr -> {mittelname, kennr, zul_ende}
     const kodeListCache = new Map();   // kodeliste -> [{kodetext, kode}] (vollständige DE-Liste)
+    const relCache = new Map();        // "K:<kultur>"/"S:<schadorg>" -> Promise<Set<code>> (ko-vorkommende Codes)
     let modalType = "psm";             // "psm" | "zusatz"
     let modalMode = "products";        // "products" | "apps"
     let currentApps = [];              // geladene Anwendungen des gewählten Produkts
@@ -1328,6 +1329,24 @@
       mittelCache.set(kennr, p);
       return p;
     }
+    // ---- Abhängige Filter: ko-vorkommende Codes (Kultur <-> Schadorganismus) ----
+    // Sammelt alle Ziel-Codes, die in denselben Anwendungen wie der Quell-Code vorkommen (via $in auf awg_id).
+    async function fetchLinkedCodes(srcPath, srcKey, srcCode, tgtPath, tgtField, signal) {
+      const rows = await bvlGetAll(srcPath, { [srcKey]: srcCode }, signal);
+      const ids = [...new Set(rows.filter((r) => r.ausgenommen !== "J").map((r) => r.awg_id))];
+      const codes = new Set();
+      const CHUNK = 50, CONC = 8;
+      const chunks = [];
+      for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
+      for (let s = 0; s < chunks.length; s += CONC) {
+        if (signal && signal.aborted) throw new DOMException("aborted", "AbortError");
+        const res = await Promise.all(chunks.slice(s, s + CONC).map((ch) => bvlGetAll(tgtPath, { AWG_ID: { $in: ch } }, signal).catch(() => [])));
+        res.forEach((rs) => rs.forEach((r) => { if (r.ausgenommen !== "J" && r[tgtField]) codes.add(r[tgtField]); }));
+      }
+      return codes;
+    }
+    function coOccurringPests(kulturCode, signal) { return fetchLinkedCodes("awg_kultur", "KULTUR", kulturCode, "awg_schadorg", "schadorg", signal); }
+    function coOccurringCrops(schadorgCode, signal) { return fetchLinkedCodes("awg_schadorg", "SCHADORG", schadorgCode, "awg_kultur", "kultur", signal); }
     // Eine global gefundene Anwendung auflösen (Produkt, BBCH, Aufwand/Wasser).
     async function resolveGlobalApp(awgId, signal) {
       const kennr = awgId.split("/")[0];
@@ -1461,26 +1480,43 @@
     }
     // Combobox für einen Kode-Filter (Kulturen 948 / Schadorganismen 947):
     // Klick öffnet die volle alphabetische Liste (einmal geladen + gecached), Tippen filtert clientseitig.
-    function setupAutocomplete(input, menu, kodeliste, onChange) {
-      let activeIdx = -1, shown = [];
+    function setupAutocomplete(input, menu, kodeliste, onChange, restrictKeyFn, restrictFetchFn) {
+      let activeIdx = -1, shown = [], acAbort = null;
       const hide = () => { menu.hidden = true; input.setAttribute("aria-expanded", "false"); activeIdx = -1; };
+      const setBusy = (msg) => { menu.innerHTML = '<div class="ac-empty">' + msg + "</div>"; menu.hidden = false; input.setAttribute("aria-expanded", "true"); };
       const renderList = () => {
         if (!shown.length) menu.innerHTML = '<div class="ac-empty">Keine Treffer</div>';
         else menu.innerHTML = shown.map((it, i) =>
           '<button type="button" class="ac-item" role="option" data-i="' + i + '">' + escapeHtml(it.kodetext) + ' <small>' + escapeHtml(it.kode) + "</small></button>").join("");
         menu.hidden = false; input.setAttribute("aria-expanded", "true"); activeIdx = -1; menu.scrollTop = 0;
       };
+      const renderPool = (pool, term) => {
+        const t = (term || "").trim().toLowerCase();
+        shown = t ? pool.filter((it) => it.kodetext.toLowerCase().includes(t)) : pool;
+        renderList();
+      };
+      // Zeigt die volle Liste – oder, wenn auf der anderen Seite etwas gewählt ist, nur die passenden Codes.
       const open = (term) => {
         const all = kodeListCache.get(kodeliste) || [];
-        const t = (term || "").trim().toLowerCase();
-        shown = t ? all.filter((it) => it.kodetext.toLowerCase().includes(t)) : all;
-        renderList();
+        const rkey = restrictKeyFn ? restrictKeyFn() : null;
+        if (!rkey) { renderPool(all, term); return; }
+        let p = relCache.get(rkey);
+        if (!p) {
+          if (acAbort) acAbort.abort();
+          acAbort = new AbortController();
+          p = restrictFetchFn(acAbort.signal);
+          relCache.set(rkey, p);
+          p.catch(() => { if (relCache.get(rkey) === p) relCache.delete(rkey); });
+          setBusy("Passende Einträge werden ermittelt …");
+        }
+        p.then((set) => { if (document.activeElement === input) renderPool(all.filter((it) => set.has(it.kode)), term); })
+         .catch((e) => { if (e && e.name === "AbortError") return; if (document.activeElement === input) renderPool(all, term); });
       };
       const choose = (it) => { input.value = it.kodetext; hide(); onChange(it.kode, it.kodetext); };
       const ensureLoaded = async () => {
         if (kodeListCache.has(kodeliste)) return true;
         if (IS_FILE) return false;
-        menu.innerHTML = '<div class="ac-empty">Wird geladen …</div>'; menu.hidden = false; input.setAttribute("aria-expanded", "true");
+        setBusy("Wird geladen …");
         try {
           const rows = await bvlGetAll("kode", { KODELISTE: kodeliste, SPRACHE: "DE" }, null, 6000);
           const seen = new Set();
@@ -1779,12 +1815,14 @@
         mKultur.value = ""; mSchadorg.value = ""; mBBCH.value = ""; renderApps();
       }
     });
-    setupAutocomplete(mgKultur, mgKulturMenu, KODELISTE_KULTUR, (code, name) => {
-      filterKulturCode = code; filterKulturName = name; updateResults();
-    });
-    setupAutocomplete(mgSchadorg, mgSchadorgMenu, KODELISTE_SCHADORG, (code, name) => {
-      filterSchadorgCode = code; filterSchadorgName = name; updateResults();
-    });
+    setupAutocomplete(mgKultur, mgKulturMenu, KODELISTE_KULTUR,
+      (code, name) => { filterKulturCode = code; filterKulturName = name; updateResults(); },
+      () => (filterSchadorgCode ? "S:" + filterSchadorgCode : null),
+      (signal) => coOccurringCrops(filterSchadorgCode, signal));
+    setupAutocomplete(mgSchadorg, mgSchadorgMenu, KODELISTE_SCHADORG,
+      (code, name) => { filterSchadorgCode = code; filterSchadorgName = name; updateResults(); },
+      () => (filterKulturCode ? "K:" + filterKulturCode : null),
+      (signal) => coOccurringPests(filterKulturCode, signal));
 
     // ===== Start =====
     renderRows();
