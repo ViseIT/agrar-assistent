@@ -974,11 +974,15 @@
       renderResults();
     }
 
+    // Pflichtmischung gilt nur, solange das Mittel, das sie vorschreibt, noch als Komponente vorhanden ist.
+    function isMandatoryActive(comp) {
+      return !!comp.mandatory && (!comp.mandatoryWithKennr || state.components.some((c) => c.registrationNumber === comp.mandatoryWithKennr));
+    }
     function updateCompHint(nameField, comp) {
       const hint = nameField.querySelector(".comp-hint");
       if (!hint) return;
       const parts = [];
-      if (comp.mandatory) parts.push("Pflichtmischung" + (comp.mandatoryWith ? " mit " + comp.mandatoryWith : ""));
+      if (isMandatoryActive(comp)) parts.push("Pflichtmischung" + (comp.mandatoryWith ? " mit " + comp.mandatoryWith : ""));
       if (comp.app) {
         if (comp.app.kulturen && comp.app.kulturen.length) parts.push(comp.app.kulturen.join(", "));
         if (comp.app.schadorgs && comp.app.schadorgs.length) parts.push(comp.app.schadorgs.join(", "));
@@ -1017,6 +1021,11 @@
           if (waterRate != null && comp.app.wVon != null && comp.app.wBis != null && (!wEin || wEin === "LH") && (waterRate < comp.app.wVon || waterRate > comp.app.wBis)) {
             msgs.push(["warn", "Wasser " + nfHa.format(waterRate) + " l/ha außerhalb Empfehlung " + nfHa.format(comp.app.wVon) + "–" + nfHa.format(comp.app.wBis) + " l/ha für dieses Mittel"]);
           }
+        }
+        if (isMandatoryActive(comp) && comp.mandatoryRate != null && comp.rate != null && comp.rate !== comp.mandatoryRate) {
+          const uLbl = (UNIT_BY_CODE[comp.unit] || UNIT_BY_CODE.L).label;
+          const over = comp.rate > comp.mandatoryRate;
+          msgs.push([over ? "error" : "warn", (over ? "über" : "unter") + " der vorgeschriebenen Menge (" + nfHa.format(comp.mandatoryRate) + " " + uLbl + "/ha)"]);
         }
         if (comp.authEndDate) {
           if (isExpired(comp.authEndDate)) msgs.push(["error", "Zulassung abgelaufen"]);
@@ -1986,10 +1995,10 @@
           wVon: d.wVon != null ? d.wVon : null, wBis: d.wBis != null ? d.wBis : null, wEinheit: d.wEinheit || null,
         },
       });
-      addMandatoryPartner(app, product.mittelname);
+      addMandatoryPartner(app, product.mittelname, product.kennr);
     }
     // Vorgeschriebene Mischung (mischung_art "KV") automatisch als Komponente ergänzen (nach dem Schließen).
-    async function addMandatoryPartner(app, withName) {
+    async function addMandatoryPartner(app, withName, withKennr) {
       if (!app.awgId || IS_FILE) return;
       try {
         const partners = await bvlGet("awg_partner", { AWG_ID: app.awgId }, 10);
@@ -2008,7 +2017,7 @@
             unit: BVL_UNIT_MAP[a0.m_aufwand_einheit] || "L",
             rate: a0.m_aufwand != null ? a0.m_aufwand : null, unitFixed: a0.m_aufwand != null,
             registrationNumber: m.partner_kennr, authEndDate: end || null, app: null,
-            mandatory: true, mandatoryWith: withName || "",
+            mandatory: true, mandatoryWith: withName || "", mandatoryWithKennr: withKennr || "", mandatoryRate: a0.m_aufwand != null ? a0.m_aufwand : null,
           });
         }
         renderRows();
