@@ -460,15 +460,18 @@
     .app-detoggle { background: none; border: none; color: var(--mat-sys-primary); font: inherit; cursor: pointer; padding: var(--spacing-xs) 0; display: inline-flex; align-items: center; gap: var(--spacing-xs); align-self: flex-start; }
     .app-detoggle svg { width: 18px; height: 18px; transition: transform 0.15s; }
     .app-detoggle--open svg { transform: rotate(180deg); }
-    .app-detail { margin-top: var(--spacing-s); padding-top: var(--spacing-s); border-top: 1px solid var(--mat-sys-outline-variant); display: flex; flex-direction: column; gap: var(--spacing-m); }
+    .app-detail { margin-top: var(--spacing-s); display: flex; flex-direction: column; gap: var(--spacing-m); }
     .det-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--spacing-s) var(--spacing-m); }
-    .det-item { display: flex; gap: var(--spacing-s); }
+    .det-item { display: flex; gap: var(--spacing-s); min-width: 0; }
+    .det-item > div { min-width: 0; }
     .det-item svg { width: 18px; height: 18px; color: var(--mat-sys-on-surface-variant); flex: 0 0 auto; margin-top: 2px; }
     .det-k { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); }
-    .det-v { font-weight: var(--font-weight-medium); }
+    .det-v { font-weight: var(--font-weight-medium); overflow-wrap: anywhere; }
     .det-sec-title { font-size: var(--font-xs); letter-spacing: 0.04em; text-transform: uppercase; color: var(--mat-sys-on-surface-variant); margin-bottom: var(--spacing-xxs); }
     .det-partner { color: var(--mat-sys-primary); font-weight: var(--font-weight-semibold); margin-right: var(--spacing-xs); }
-    .det-auflagen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--spacing-xs); }
+    .det-auflagen { list-style: disc; margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: var(--spacing-xs); }
+    .det-auflagen li::marker { color: var(--mat-sys-on-surface-variant); }
+    .det-dose { font-size: var(--font-s); line-height: 1.5; }
     .det-auflagen li { font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); line-height: 1.4; }
     .det-auflagen b { color: var(--mat-sys-on-surface); font-weight: var(--font-weight-medium); }
     .ghs { display: flex; gap: var(--spacing-s); flex-wrap: wrap; }
@@ -813,7 +816,6 @@
     const ICON_WAIT = "M6 2h12v6l-4 4 4 4v6H6v-6l4-4-4-4zM8 4v3l4 4 4-4V4z";
     const ICON_TECH = "M4 17a3 3 0 0 0 6 0h6a2 2 0 0 0 4 0h1v-4l-3-5h-4V4H3v9H2v4zm3-9h5v3H7z";
     const ICON_SECTOR = "M12 2 2 7l10 5 10-5zM2 17l10 5 10-5M2 12l10 5 10-5";
-    const ICON_TIME = "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 11h-4v-2h2V7h2z";
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -1727,12 +1729,13 @@
 
     // ---- Aufklappbare Anwendungs-Details (lazy geladen, gecacht) ----
     const appDetailCache = new Map();
-    const KL_BEREICH = 4, KL_TECHNIK = 27, KL_SEKTOR = 11, KL_WARTEZEIT = 89, KL_ZEITPUNKT = 30, KL_AUFLAGE = 74;
+    const KL_BEREICH = 4, KL_TECHNIK = 27, KL_SEKTOR = 11, KL_WARTEZEIT = 89, KL_ZEITPUNKT = 30, KL_AUFLAGE = 74, KL_AUFWANDBED = 28;
     const GHS_LABELS = { GHS01: "Explosiv", GHS02: "Entzündbar", GHS03: "Brandfördernd", GHS04: "Gas unter Druck", GHS05: "Ätzend", GHS06: "Giftig", GHS07: "Achtung", GHS08: "Gesundheitsgefahr", GHS09: "Umweltgefährlich" };
     async function renderAppDetail(app, kennr) {
       if (appDetailCache.has(app.awgId)) return appDetailCache.get(app.awgId);
       const id = app.awgId;
-      const [wzArr, zpArr, partners, pAufw, aufl, ghs] = await Promise.all([
+      const [awArr, wzArr, zpArr, partners, pAufw, aufl, ghs] = await Promise.all([
+        bvlGet("awg_aufwand", { AWG_ID: id }, 20).catch(() => []),
         bvlGet("awg_wartezeit", { AWG_ID: id }, 10).catch(() => []),
         bvlGet("awg_zeitpunkt", { AWG_ID: id }, 10).catch(() => []),
         bvlGet("awg_partner", { AWG_ID: id }, 10).catch(() => []),
@@ -1743,15 +1746,38 @@
       const einsatz = await resolveKode(KL_BEREICH, app.anwendungsbereich);
       const technik = await resolveKode(KL_TECHNIK, app.anwendungstechnik);
       const sektor = await resolveKode(KL_SEKTOR, app.einsatzgebiet);
+      // Wartezeit: numerisch "X Tage", die häufige "abgedeckt"-Bemerkung kurz, sonst gekürzt.
       let wartezeit = "";
       const wz = wzArr[0];
       if (wz) {
         if (wz.gesetzt_wartezeit != null && String(wz.gesetzt_wartezeit).trim() !== "") wartezeit = wz.gesetzt_wartezeit + " Tage";
-        else if (wz.gesetzt_wartezeit_bem) wartezeit = await resolveKode(KL_WARTEZEIT, wz.gesetzt_wartezeit_bem);
+        else if (wz.gesetzt_wartezeit_bem) {
+          const t = await resolveKode(KL_WARTEZEIT, wz.gesetzt_wartezeit_bem);
+          if (/vegetationszeit/i.test(t)) wartezeit = "durch Vegetationszeit abgedeckt";
+          else if (/nicht erforderlich|keine wartezeit/i.test(t)) wartezeit = "keine Wartezeit";
+          else wartezeit = t.length > 60 ? t.slice(0, 60).replace(/\s+\S*$/, "") + " …" : t;
+        }
       }
-      const zpNames = (await Promise.all(
-        zpArr.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0)).map((z) => resolveKode(KL_ZEITPUNKT, z.zeitpunkt))
-      )).filter(Boolean);
+      // Zeitpunkt-Namen je sortier_nr (für die Verknüpfung mit den Dosierungen).
+      const zpNameBySort = {};
+      await Promise.all(zpArr.map(async (z) => { zpNameBySort[z.sortier_nr] = await resolveKode(KL_ZEITPUNKT, z.zeitpunkt); }));
+      const zpAll = zpArr.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0)).map((z) => zpNameBySort[z.sortier_nr]).filter(Boolean).join(", ");
+      // Dosierung(en): je awg_aufwand-Zeile, ggf. mit Zeitpunkt (aufwandbedingung ZTP<n> -> zeitpunkt sortier_nr n).
+      const dosen = [];
+      for (const r of awArr.slice().sort((a, b) => (a.sortier_nr || 0) - (b.sortier_nr || 0))) {
+        if (r.m_aufwand == null) continue;
+        const rate = fmt(r.m_aufwand, Number.isInteger(r.m_aufwand) ? 0 : 3) + " " + (BVL_UNIT_LABEL[r.m_aufwand_einheit] || r.m_aufwand_einheit || "");
+        const ab = (r.aufwandbedingung || "").trim();
+        let label = "";
+        if (ab) {
+          const abText = await resolveKode(KL_AUFWANDBED, ab);
+          const zpName = zpNameBySort[parseInt(ab.replace(/\D/g, ""), 10)];
+          label = abText + (zpName ? " (" + zpName + ")" : "");
+        } else {
+          label = zpAll;
+        }
+        dosen.push({ label: label, rate: rate });
+      }
       // Zusatzstoffe / Partner
       const partnerHtml = [];
       for (const p of partners) {
@@ -1764,18 +1790,17 @@
         const pflicht = (p.mischung_art || "").trim() === "KV" ? ' <span class="badge badge--soon">Pflichtmischung</span>' : "";
         partnerHtml.push('<span class="det-partner">' + escapeHtml(name + dose) + "</span>" + pflicht);
       }
-      // Auflagen & Abstände (nur Naturhaushalt: Wasser/Terr./Bienen), Text gekürzt
+      // Auflagen & Abstände (nur Naturhaushalt: Wasser/Terr./Bienen), Volltext.
       const auflItems = [];
       for (const code of aufl.map((x) => x.auflage).filter((c) => c && /^N[WTB]/.test(c))) {
-        let t = await resolveKode(KL_AUFLAGE, code);
-        if (t && t.length > 170) t = t.slice(0, 170).replace(/\s+\S*$/, "") + " …";
-        auflItems.push({ code: code, text: t });
+        auflItems.push({ code: code, text: await resolveKode(KL_AUFLAGE, code) });
       }
       const ghsHtml = ghs.map((g) => g.gefahrensymbol).filter(Boolean).map((c) =>
         '<span class="ghs-badge"><span class="dia"></span>' + escapeHtml(c + (GHS_LABELS[c] ? " " + GHS_LABELS[c] : "")) + "</span>").join("");
       const item = (icon, k, v) => v ? '<div class="det-item">' + svgIcon(icon) + '<div><div class="det-k">' + k + '</div><div class="det-v">' + escapeHtml(v) + "</div></div></div>" : "";
-      const grid = item(ICON_AREA, "Einsatzgebiet", einsatz) + item(ICON_WAIT, "Wartezeit", wartezeit) + item(ICON_TECH, "Technik", technik) + item(ICON_SECTOR, "Sektor", sektor) + item(ICON_TIME, "Zeitpunkt", zpNames.join(", "));
+      const grid = item(ICON_AREA, "Einsatzgebiet", einsatz) + item(ICON_WAIT, "Wartezeit", wartezeit) + item(ICON_TECH, "Technik", technik) + item(ICON_SECTOR, "Sektor", sektor);
       let html = grid ? '<div class="det-grid">' + grid + "</div>" : "";
+      if (dosen.length) html += '<div><div class="det-sec-title">Dosierung</div>' + dosen.map((d) => '<div class="det-dose">' + (d.label ? '<span class="det-k">' + escapeHtml(d.label) + '</span> ' : "") + "<b>" + escapeHtml(d.rate) + "</b></div>").join("") + "</div>";
       if (partnerHtml.length) html += '<div><div class="det-sec-title">Zusatzstoffe</div><div>' + partnerHtml.join(" ") + "</div></div>";
       if (auflItems.length) html += '<div><div class="det-sec-title">Auflagen &amp; Abstände</div><ul class="det-auflagen">' + auflItems.map((a) => "<li><b>" + escapeHtml(a.code) + ":</b> " + escapeHtml(a.text) + "</li>").join("") + "</ul></div>";
       if (ghsHtml) html += '<div><div class="det-sec-title">Warnzeichen</div><div class="ghs">' + ghsHtml + "</div></div>";
