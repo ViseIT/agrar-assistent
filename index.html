@@ -398,12 +398,15 @@
     .modal-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 4vh var(--spacing-m); background: rgba(0, 0, 0, 0.62); overflow-y: auto; }
     .modal-overlay[hidden] { display: none; }
     .modal--sm { max-width: 460px; }
-    .kat-search { margin-bottom: var(--spacing-m); }
-    .kat-search input { width: 100%; background: var(--mat-sys-surface-container-highest); color: var(--mat-sys-on-surface); border: none; border-bottom: 1px solid var(--mat-sys-outline); border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0; padding: 10px var(--spacing-sm); font: inherit; }
-    .kat-search input:focus { outline: none; border-bottom-color: var(--mat-sys-primary); }
+    .kat-filters { display: flex; flex-wrap: wrap; gap: var(--spacing-s); align-items: center; margin-bottom: var(--spacing-m); }
+    .kat-filter { position: relative; flex: 1 1 190px; min-width: 150px; }
+    .kat-filter--search { flex: 2 1 240px; }
+    .kat-filter input { width: 100%; background: var(--mat-sys-surface-container-highest); color: var(--mat-sys-on-surface); border: none; border-bottom: 1px solid var(--mat-sys-outline); border-radius: var(--mat-sys-corner-small) var(--mat-sys-corner-small) 0 0; padding: 10px var(--spacing-sm); font: inherit; }
+    .kat-filter input:focus { outline: none; border-bottom-color: var(--mat-sys-primary); }
+    .kat-check { display: inline-flex; align-items: center; gap: var(--spacing-xs); flex: 0 0 auto; color: var(--mat-sys-on-surface-variant); font-size: var(--font-s); cursor: pointer; user-select: none; }
+    .kat-check input { accent-color: var(--mat-sys-primary); width: 16px; height: 16px; cursor: pointer; }
     .kat-results { display: flex; flex-direction: column; gap: var(--spacing-s); }
     .kat-list { display: flex; flex-direction: column; gap: var(--spacing-s); max-height: 62vh; overflow-y: auto; }
-    .kat-count { text-align: left; padding: 0 0 var(--spacing-xs); }
     .det-line-txt { font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); line-height: 1.5; }
     .modal { width: 100%; max-width: 960px; margin: auto; background: var(--mat-sys-surface-container-highest); border-radius: var(--mat-sys-corner-large); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); display: flex; flex-direction: column; max-height: 92vh; }
     .modal__head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-m); padding: var(--spacing-m) var(--spacing-l); }
@@ -627,13 +630,31 @@
 
     <div id="viewKatalog" class="view" hidden>
       <section class="card">
-        <div class="kat-search"><input type="text" id="katPsmSearch" autocomplete="off" spellcheck="false" placeholder="Pflanzenschutzmittel filtern …" aria-label="Pflanzenschutzmittel filtern" /></div>
+        <div class="kat-filters">
+          <div class="kat-filter kat-filter--search"><input type="text" id="katPsmSearch" autocomplete="off" spellcheck="false" placeholder="Name filtern …" aria-label="Pflanzenschutzmittel nach Name filtern" /></div>
+          <div class="kat-filter ac" id="katKulturWrap">
+            <input type="text" id="katKultur" autocomplete="off" spellcheck="false" placeholder="Kultur wählen …" aria-label="Kultur" role="combobox" aria-expanded="false" aria-controls="katKulturMenu" aria-autocomplete="list" />
+            <button type="button" class="ac-clear" tabindex="-1" aria-label="Kultur entfernen"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.71 12 12l6.29 6.29-1.42 1.42L10.58 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.3 4.29l6.28 6.3 6.3-6.3z"/></svg></button>
+            <span class="ac-caret" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></span>
+            <div class="ac-menu" id="katKulturMenu" role="listbox" hidden></div>
+          </div>
+          <div class="kat-filter ac" id="katSchadorgWrap">
+            <input type="text" id="katSchadorg" autocomplete="off" spellcheck="false" placeholder="Schadorganismus wählen …" aria-label="Schadorganismus" role="combobox" aria-expanded="false" aria-controls="katSchadorgMenu" aria-autocomplete="list" />
+            <button type="button" class="ac-clear" tabindex="-1" aria-label="Schadorganismus entfernen"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.71 12 12l6.29 6.29-1.42 1.42L10.58 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.3 4.29l6.28 6.3 6.3-6.3z"/></svg></button>
+            <span class="ac-caret" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></span>
+            <div class="ac-menu" id="katSchadorgMenu" role="listbox" hidden></div>
+          </div>
+          <label class="kat-check"><input type="checkbox" id="katPsmHideExpired" checked /> Abgelaufene ausblenden</label>
+        </div>
         <div class="kat-results" id="katPsmResults"><div class="modal__status">Katalog wird geladen …</div></div>
       </section>
     </div>
     <div id="viewZusatzKatalog" class="view" hidden>
       <section class="card">
-        <div class="kat-search"><input type="text" id="katZusSearch" autocomplete="off" spellcheck="false" placeholder="Zusatzstoff filtern …" aria-label="Zusatzstoff filtern" /></div>
+        <div class="kat-filters">
+          <div class="kat-filter kat-filter--search"><input type="text" id="katZusSearch" autocomplete="off" spellcheck="false" placeholder="Name filtern …" aria-label="Zusatzstoff nach Name filtern" /></div>
+          <label class="kat-check"><input type="checkbox" id="katZusHideExpired" checked /> Abgelaufene ausblenden</label>
+        </div>
         <div class="kat-results" id="katZusResults"><div class="modal__status">Katalog wird geladen …</div></div>
       </section>
     </div>
@@ -1199,6 +1220,12 @@
     const katZusResults = document.getElementById("katZusResults");
     let catalogPsm = null, catalogZus = null;
     const katOffline = '<div class="modal__status">Der Katalog ist nur online verfügbar (BVL-Daten).</div>';
+    const katPsmHideExpired = document.getElementById("katPsmHideExpired");
+    const katZusHideExpired = document.getElementById("katZusHideExpired");
+    const katKultur = document.getElementById("katKultur"), katKulturMenu = document.getElementById("katKulturMenu");
+    const katSchadorg = document.getElementById("katSchadorg"), katSchadorgMenu = document.getElementById("katSchadorgMenu");
+    let catKulturCode = null, catSchadorgCode = null;
+    let catKennrSet = null, catFilterGen = 0; // catKennrSet=null -> kein Kultur/Schadorg-Filter
 
     function catProductRow(p) {
       return '<button type="button" class="result-row result-row--click" data-kennr="' + escapeHtml(p.kennr || "") + '">' +
@@ -1206,12 +1233,32 @@
         '<div class="result-row__meta' + (isExpired(p.zul_ende) ? " expired" : "") + '">Zul.-Nr. ' + escapeHtml(p.kennr || "–") + (p.zul_ende ? " · gültig bis " + escapeHtml(formatBvlDate(p.zul_ende)) : "") + "</div></div>" +
         '<div class="result-row__action">' + statusBadge(p.zul_ende) + '<span class="badge">Anwendungen ›</span></div></button>';
     }
-    function renderCatalogPsm(filter) {
+    function renderCatalogPsm() {
       if (!catalogPsm) return;
-      const t = (filter || "").trim().toLowerCase();
-      const list = t ? catalogPsm.filter((p) => (p.mittelname || "").toLowerCase().includes(t)) : catalogPsm;
-      katPsmResults.innerHTML = '<div class="modal__status kat-count">' + list.length + " Mittel" + (t ? "" : " · alphabetisch") + "</div>" +
-        '<div class="kat-list">' + list.map(catProductRow).join("") + "</div>";
+      const t = katPsmSearch.value.trim().toLowerCase();
+      let list = catalogPsm;
+      if (catKennrSet) list = list.filter((p) => catKennrSet.has(p.kennr));
+      if (katPsmHideExpired.checked) list = list.filter((p) => !isExpired(p.zul_ende));
+      if (t) list = list.filter((p) => (p.mittelname || "").toLowerCase().includes(t));
+      if (!list.length) { katPsmResults.innerHTML = '<div class="modal__status">Keine Treffer.</div>'; return; }
+      katPsmResults.innerHTML = '<div class="kat-list">' + list.map(catProductRow).join("") + "</div>";
+    }
+    // Kultur/Schadorg-Filter: passende awg_id-Mengen schneiden -> kennr-Set, dann die vorgeladene Liste filtern (Rennschutz via Generation).
+    async function recomputeCatPsmFilter() {
+      const gen = ++catFilterGen;
+      if (!catKulturCode && !catSchadorgCode) { catKennrSet = null; renderCatalogPsm(); return; }
+      katPsmResults.innerHTML = '<div class="modal__status">Passende Mittel werden ermittelt …</div>';
+      try {
+        const tasks = [];
+        if (catKulturCode) tasks.push(bvlGetAll("awg_kultur", { KULTUR: catKulturCode }, null).then((rows) => new Set(rows.filter((r) => r.ausgenommen !== "J").map((r) => r.awg_id))));
+        if (catSchadorgCode) tasks.push(bvlGetAll("awg_schadorg", { SCHADORG: catSchadorgCode }, null).then((rows) => new Set(rows.filter((r) => r.ausgenommen !== "J").map((r) => r.awg_id))));
+        const sets = await Promise.all(tasks);
+        if (gen !== catFilterGen) return;
+        let awgIds = [...sets[0]];
+        if (sets.length === 2) awgIds = awgIds.filter((id) => sets[1].has(id));
+        catKennrSet = new Set(awgIds.map((id) => id.split("/")[0]));
+        renderCatalogPsm();
+      } catch (e) { if (gen === catFilterGen) katPsmResults.innerHTML = '<div class="modal__status">Filter konnte nicht angewendet werden.</div>'; }
     }
     async function initCatalogPsm() {
       if (catalogPsm) return;
@@ -1221,7 +1268,7 @@
         const rows = await bvlGetAll("mittel", {}, null, 8000);
         const seen = new Set();
         catalogPsm = rows.filter((o) => o.mittelname && !seen.has(o.kennr) && seen.add(o.kennr)).sort((a, b) => a.mittelname.localeCompare(b.mittelname, "de"));
-        renderCatalogPsm(katPsmSearch.value);
+        renderCatalogPsm();
       } catch (e) { katPsmResults.innerHTML = '<div class="modal__status">Katalog konnte nicht geladen werden.</div>'; }
     }
     async function catalogOpenProduct(product) {
@@ -1232,7 +1279,7 @@
       katPsmResults.innerHTML = "";
       const back = document.createElement("button");
       back.type = "button"; back.className = "modal__back"; back.textContent = "‹ Zurück zum Katalog";
-      back.addEventListener("click", () => renderCatalogPsm(katPsmSearch.value));
+      back.addEventListener("click", () => renderCatalogPsm());
       katPsmResults.appendChild(back);
       const head = document.createElement("div");
       head.className = "result-row";
@@ -1280,12 +1327,14 @@
         '<div class="result-row__meta' + (isExpired(z.genehmigungsende) ? " expired" : "") + '">Zusatzstoff · Kennr. ' + escapeHtml(z.kennr || "–") + (z.genehmigungsende ? " · gültig bis " + escapeHtml(formatBvlDate(z.genehmigungsende)) : "") + "</div></div>" +
         '<div class="result-row__action">' + statusBadge(z.genehmigungsende) + "</div></div>";
     }
-    function renderCatalogZus(filter) {
+    function renderCatalogZus() {
       if (!catalogZus) return;
-      const t = (filter || "").trim().toLowerCase();
-      const list = t ? catalogZus.filter((z) => (z.mittelname || "").toLowerCase().includes(t)) : catalogZus;
-      katZusResults.innerHTML = '<div class="modal__status kat-count">' + list.length + " Zusatzstoffe" + (t ? "" : " · alphabetisch") + "</div>" +
-        '<div class="kat-list">' + list.map(catZusRow).join("") + "</div>";
+      const t = katZusSearch.value.trim().toLowerCase();
+      let list = catalogZus;
+      if (katZusHideExpired.checked) list = list.filter((z) => !isExpired(z.genehmigungsende));
+      if (t) list = list.filter((z) => (z.mittelname || "").toLowerCase().includes(t));
+      if (!list.length) { katZusResults.innerHTML = '<div class="modal__status">Keine Treffer.</div>'; return; }
+      katZusResults.innerHTML = '<div class="kat-list">' + list.map(catZusRow).join("") + "</div>";
     }
     async function initCatalogZus() {
       if (catalogZus) return;
@@ -1295,7 +1344,7 @@
         const rows = await bvlGetAll("zusatzstoff", {}, null, 4000);
         const seen = new Set();
         catalogZus = rows.filter((o) => o.mittelname && !seen.has(o.kennr) && seen.add(o.kennr)).sort((a, b) => a.mittelname.localeCompare(b.mittelname, "de"));
-        renderCatalogZus(katZusSearch.value);
+        renderCatalogZus();
       } catch (e) { katZusResults.innerHTML = '<div class="modal__status">Katalog konnte nicht geladen werden.</div>'; }
     }
     if (katPsmResults) katPsmResults.addEventListener("click", (e) => {
@@ -1304,8 +1353,10 @@
       const p = catalogPsm.find((x) => x.kennr === b.dataset.kennr);
       if (p) catalogOpenProduct(p);
     });
-    if (katPsmSearch) { let kt = null; katPsmSearch.addEventListener("input", () => { clearTimeout(kt); kt = setTimeout(() => renderCatalogPsm(katPsmSearch.value), 200); }); }
-    if (katZusSearch) { let zt = null; katZusSearch.addEventListener("input", () => { clearTimeout(zt); zt = setTimeout(() => renderCatalogZus(katZusSearch.value), 200); }); }
+    if (katPsmSearch) { let kt = null; katPsmSearch.addEventListener("input", () => { clearTimeout(kt); kt = setTimeout(renderCatalogPsm, 200); }); }
+    if (katZusSearch) { let zt = null; katZusSearch.addEventListener("input", () => { clearTimeout(zt); zt = setTimeout(renderCatalogZus, 200); }); }
+    if (katPsmHideExpired) katPsmHideExpired.addEventListener("change", renderCatalogPsm);
+    if (katZusHideExpired) katZusHideExpired.addEventListener("change", renderCatalogZus);
 
     // ===== Rechtliches-Menü (Info-Icon in der Topbar) =====
     const legalBtn = document.getElementById("legalMenuBtn");
@@ -2221,6 +2272,15 @@
       (code, name) => { filterSchadorgCode = code; filterSchadorgName = name; },
       () => (filterKulturCode ? "K:" + filterKulturCode : null),
       (signal) => coOccurringPests(filterKulturCode, signal));
+    // Katalog-Filter (eigener State, unabhängig vom Modal): abhängige Kultur<->Schadorg-Vorschläge, filtern die vorgeladene Liste.
+    if (katKultur) setupAutocomplete(katKultur, katKulturMenu, KODELISTE_KULTUR,
+      (code) => { if (code === catKulturCode) return; catKulturCode = code; recomputeCatPsmFilter(); },
+      () => (catSchadorgCode ? "S:" + catSchadorgCode : null),
+      (signal) => coOccurringCrops(catSchadorgCode, signal));
+    if (katSchadorg) setupAutocomplete(katSchadorg, katSchadorgMenu, KODELISTE_SCHADORG,
+      (code) => { if (code === catSchadorgCode) return; catSchadorgCode = code; recomputeCatPsmFilter(); },
+      () => (catKulturCode ? "K:" + catKulturCode : null),
+      (signal) => coOccurringPests(catKulturCode, signal));
 
     // ===== Start =====
     renderRows();
