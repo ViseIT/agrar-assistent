@@ -989,6 +989,7 @@
         if (comp.app.kulturen && comp.app.kulturen.length) parts.push(comp.app.kulturen.join(", "));
         if (comp.app.schadorgs && comp.app.schadorgs.length) parts.push(comp.app.schadorgs.join(", "));
         if (comp.app.bbchVon || comp.app.bbchBis) parts.push("BBCH " + bbchLabel(comp.app));
+        if (comp.app.wVon != null) parts.push("Wasser " + appWaterText(comp.app));
       }
       const expired = isExpired(comp.authEndDate);
       if (comp.registrationNumber) {
