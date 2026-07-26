@@ -421,6 +421,9 @@
     .modal__filter--search { flex: 2 1 240px; }
     .modal__filter input, .modal__filter select { width: 100%; background: var(--mat-sys-surface-container-high); color: var(--mat-sys-on-surface); border: none; border-bottom: 1px solid var(--mat-sys-on-surface-variant); border-radius: 6px 6px 0 0; padding: 10px 12px; font: inherit; }
     .modal__filter input:focus, .modal__filter select:focus { outline: none; border-bottom-color: var(--mat-sys-primary); }
+    .modal__check { display: inline-flex; align-items: center; gap: var(--spacing-xs); color: var(--mat-sys-on-surface-variant); font-size: var(--font-s); cursor: pointer; user-select: none; }
+    .modal__check input { accent-color: var(--mat-sys-primary); width: 16px; height: 16px; cursor: pointer; }
+    .modal__check[hidden] { display: none; }
     .modal__filter[hidden] { display: none; }
     .modal__filters[hidden] { display: none; }
     .modal__filter.ac { position: relative; }
@@ -699,6 +702,7 @@
         <div class="modal__filter" id="mKulturWrap" hidden><select id="mKultur" aria-label="Kultur (Filter)"><option value="">Alle Kulturen</option></select></div>
         <div class="modal__filter" id="mSchadorgWrap" hidden><select id="mSchadorg" aria-label="Schadorganismus (Filter)"><option value="">Alle Schadorganismen</option></select></div>
         <div class="modal__filter" id="mBBCHWrap" hidden><select id="mBBCH" aria-label="BBCH-Stadium"><option value="">Alle BBCH</option></select></div>
+        <label class="modal__check" id="mExpiredWrap"><input type="checkbox" id="mHideExpired" checked /> Abgelaufene ausblenden</label>
         <button type="button" class="modal__reset" id="mReset" hidden>Filter zurücksetzen</button>
       </div>
       <div class="modal__results" id="mResults" aria-live="polite"></div>
@@ -1386,6 +1390,9 @@
     const mResults = document.getElementById("mResults");
     const mSearch = document.getElementById("mSearch");
     const mReset = document.getElementById("mReset");
+    const mHideExpired = document.getElementById("mHideExpired");
+    const mExpiredWrap = document.getElementById("mExpiredWrap");
+    let lastProducts = [], lastZusatz = [];
     const mKultur = document.getElementById("mKultur"), mSchadorg = document.getElementById("mSchadorg"), mBBCH = document.getElementById("mBBCH");
     const filterWraps = ["mKulturWrap", "mSchadorgWrap", "mBBCHWrap"].map((id) => document.getElementById(id));
     const mKulturWrap = filterWraps[0], mSchadorgWrap = filterWraps[1], mBBCHWrap = filterWraps[2];
@@ -1464,6 +1471,7 @@
       // BBCH-Filter in der Anwendungsansicht und im globalen PSM-Modus.
       mBBCHWrap.hidden = !(isApps || (isGlobal && modalType === "psm"));
       mReset.hidden = !(isApps || isGlobal);
+      mExpiredWrap.hidden = isApps;
     }
     function resetGlobalFilter() {
       mgKultur.value = ""; mgSchadorg.value = ""; cardKultur.value = ""; cardSchadorg.value = "";
@@ -1474,6 +1482,7 @@
     }
     function renderStatus(text) { mResults.innerHTML = '<div class="modal__status">' + escapeHtml(text) + "</div>"; }
     function showIdleState() {
+      lastProducts = []; lastZusatz = []; // keine veralteten Treffer, die ein Ablauf-Toggle über den Idle-Zustand rendern könnte
       if (IS_FILE) { renderManualEntry(); return; }
       if (modalType === "psm") renderStatus("Kultur und Schadorganismus wählen – oder Mittelname eingeben (mind. 2 Zeichen).");
       else renderStatus("Mind. 2 Zeichen eingeben, um zu suchen.");
@@ -1697,6 +1706,7 @@
       const fb = mBBCH.value;
       const list = currentGlobal
         .filter((r) => !fb || bbchLabel(r) === fb)
+        .filter((r) => !mHideExpired.checked || !isExpired(r.product.zul_ende))
         .sort((a, b) => (a.product.mittelname || "").localeCompare(b.product.mittelname || "", "de"));
       mResults.innerHTML = "";
       const info = document.createElement("div");
@@ -1844,9 +1854,11 @@
 
     function renderProducts(products) {
       setModalMode("products"); selectedAwgId = null;
-      if (!products.length) { renderStatus("Keine Treffer."); return; }
+      lastProducts = products;
+      const shown = mHideExpired.checked ? products.filter((p) => !isExpired(p.zul_ende)) : products;
+      if (!shown.length) { renderStatus("Keine Treffer."); return; }
       mResults.innerHTML = "";
-      products.forEach((p) => {
+      shown.forEach((p) => {
         const row = document.createElement("button");
         row.type = "button";
         row.className = "result-row result-row--click";
@@ -2072,9 +2084,11 @@
 
     function renderZusatz(list) {
       setModalMode("products");
-      if (!list.length) { renderStatus("Keine Treffer."); return; }
+      lastZusatz = list;
+      const shown = mHideExpired.checked ? list.filter((z) => !isExpired(z.genehmigungsende)) : list;
+      if (!shown.length) { renderStatus("Keine Treffer."); return; }
       mResults.innerHTML = "";
-      list.forEach((z) => {
+      shown.forEach((z) => {
         const isSel = !!(selectedZusatzKennr && z.kennr === selectedZusatzKennr);
         const row = document.createElement("div");
         row.className = "result-row" + (isSel ? " result-row--selected" : "");
@@ -2247,6 +2261,11 @@
     });
     [mKultur, mSchadorg].forEach((s) => s.addEventListener("change", renderApps));
     mBBCH.addEventListener("change", () => { if (modalMode === "global") renderGlobal(); else renderApps(); });
+    mHideExpired.addEventListener("change", () => {
+      if (modalMode === "global") renderGlobal();
+      else if (modalType === "zusatz") { if (lastZusatz.length) renderZusatz(lastZusatz); }
+      else if (lastProducts.length) renderProducts(lastProducts);
+    });
     mReset.addEventListener("click", () => {
       if (modalMode === "global") {
         resetGlobalFilter(); mBBCH.value = "";
@@ -2283,6 +2302,13 @@
       (signal) => coOccurringPests(catKulturCode, signal));
 
     // ===== Start =====
+    // Einheiten-Labels komplett aus BVL-Kodeliste 25 übernehmen (amtliche Bezeichnungen, deckt Kleinflächen-Einheiten wie ml/m² ab); die 6 Defaults bleiben nur Offline-/Sofort-Fallback.
+    (function loadUnitLabels() {
+      if (IS_FILE) return;
+      bvlGetAll("kode", { KODELISTE: 25, SPRACHE: "DE" }, null, 500)
+        .then((rows) => { rows.forEach((r) => { if (r.kode && r.kodetext && r.sperre !== "J") BVL_UNIT_LABEL[r.kode] = r.kodetext; }); })
+        .catch(() => {});
+    })();
     renderRows();
   </script>
 </body>
