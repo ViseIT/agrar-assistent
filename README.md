@@ -25,8 +25,20 @@ die Gesamtmengen und die einzelnen Spritzenfüllungen.
   bestimmen die Anzahl der Spritzen.
 - **Feste Einheiten** (kg/g/Stück/Tabletten) werden je Spritze anteilig ausgewiesen.
 - Die **Wasserzeile ist optional** – für reine Feststoff-Maßnahmen einfach leer lassen.
+- **Schlag benennen:** Das Feld „Schlag" beschriftet die Berechnung (praktisch für den
+  Ausdruck an den Fahrer). Eingetippte Namen merkt sich der Browser lokal und schlägt sie
+  beim nächsten Mal vor; über das **X** in der Vorschlagsliste fliegt ein Name wieder raus.
+- **Eigene Mittel:** Im Auswahl-Dialog gibt es neben Wasser, Pflanzenschutzmitteln und
+  Zusatzstoffen den Reiter **Eigene** für Mittel, die nicht im BVL-Verzeichnis stehen
+  (z. B. Hofmischungen). Sie werden lokal im Browser gemerkt und lassen sich dort einzeln
+  über das Papierkorb-Symbol löschen. Für eigene Einträge gibt es keine Zulassungsprüfung.
 - **Drucken / als PDF speichern** über den Button oben rechts (z. B. zum Weitergeben an
   den Fahrer).
+
+Die beiden Merklisten (Schlagnamen, eigene Mittel) sind das Einzige, was die Seite
+dauerhaft speichert – sie liegen ausschließlich im lokalen Speicher des Browsers und
+verlassen das Gerät nicht. Alles andere (Feldgröße, Mengen, Ergebnis) ist nach einem
+Neuladen weg.
 
 ## Pflanzenschutzmittel-Suche (BVL)
 

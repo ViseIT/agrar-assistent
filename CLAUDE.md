@@ -17,8 +17,14 @@ Kopfzeile dazu.
   offline lauffähig bleiben und (für die reine Berechnung) auch per Doppelklick von
   `file://` funktionieren.
 - **Kein Server, kein eigenes Hosting.** Keine Backend-Aufrufe außer der öffentlichen
-  BVL-API (s. u.). Kein Speichern/Persistenz – die Seite hält keinen Zustand über einen
-  Reload hinaus.
+  BVL-API (s. u.). Eingaben und Berechnung sind flüchtig – sie überleben keinen Reload.
+- **Einzige Ausnahme: lokale Komfortlisten** in `localStorage` (Schlagnamen unter
+  `agrar-assistent.schlaege`, eigene Mittel unter `agrar-assistent.eigene-mittel`) – reine
+  Namenslisten, keine Berechnungsdaten, nichts verlässt den Browser. Zugriff ausschließlich
+  über `storeList`/`storeAdd`/`storeRemove`; ist `localStorage` blockiert (`file://`,
+  strenge Browsereinstellungen, Quota), fällt der Code still auf einen Sitzungsspeicher
+  zurück. Jeder Eintrag muss in der UI einzeln löschbar bleiben. Neue Speicherarten nur
+  nach Abstimmung – und dann auch `privacy.html` (Ziffer 6) mitziehen.
 - **Dark-Theme only** (Bildschirm). Farbwerte sind Material-3-Tokens (Seed `#FF9900`) als
   CSS-Variablen `--mat-sys-*` im `:root`. Ausnahme: der `@media print`-Block nutzt bewusst
   feste helle Druckfarben (Papier ist hell) – kein Verstoß gegen die Token-Regel.
@@ -47,6 +53,8 @@ Kopfzeile dazu.
   der letzten Spritze, **Limit 20 Füllungen**. Ohne Flüssigkeit (`solidsOnly`) gibt es keine
   Aufteilung, nur einen Hinweis.
 - Die Wasserzeile ist fest (nicht löschbar), aber optional: leer lassen = kein Wasser.
+- Der **Schlagname** ist reine Beschriftung (Auftrag für Mitarbeiter/Ausdruck) und geht
+  nicht in `compute()` ein.
 - Anzeige mit `Intl.NumberFormat('de-DE')` (nf0/nf2); Tankkapazität als gruppierte Ganzzahl.
 - Änderungen an dieser Logik nur bewusst und getestet (Node-Testskript für Szenarien inkl.
   gemischte Einheiten, Rundungsregel, `solidsOnly`, Limit, Leerfall).
