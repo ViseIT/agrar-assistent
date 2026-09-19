@@ -154,6 +154,44 @@
       gap: var(--spacing-m); margin: var(--spacing-m) 0;
     }
 
+    /* Fields (Schläge): one row per field with name + size; move/delete actions only exist with several rows. */
+    .fields-block { margin: var(--spacing-m) 0; }
+    .field-row-header, .field-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) 9rem;
+      column-gap: var(--spacing-m); align-items: start;
+    }
+    /* Fixed actions width (2 move buttons + delete button + gaps), so the separate header grid
+       lines up with the rows even though its actions cell is empty. */
+    .fields-block.with-actions .field-row-header, .fields-block.with-actions .field-row {
+      grid-template-columns: minmax(0, 1fr) 9rem calc(2 * 32px + 40px + 2 * var(--spacing-xxs));
+    }
+    .field-row-header { font-size: var(--font-xs); color: var(--mat-sys-on-surface-variant); margin-bottom: var(--spacing-xxs); }
+    .field-row + .field-row { margin-top: var(--spacing-s); }
+    .field-row__actions { display: flex; align-items: center; gap: var(--spacing-xxs); }
+    .field-move { display: flex; gap: var(--spacing-xxs); }
+    /* Narrow screens: the name gets its own line, size and actions share the second one. */
+    @media (max-width: 520px) {
+      .field-row-header { display: none; }
+      .field-row, .fields-block.with-actions .field-row { grid-template-columns: minmax(0, 1fr) auto; row-gap: var(--spacing-xs); }
+      .field-row > .field.ac { grid-column: 1 / -1; }
+      .field-row + .field-row { margin-top: var(--spacing-m); }
+    }
+    .move-button {
+      width: 32px; height: 40px; padding: 0; border: none; background: transparent; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--mat-sys-on-surface-variant); border-radius: var(--mat-sys-corner-small);
+    }
+    .move-button:hover:not(:disabled) { color: var(--mat-sys-on-surface); background: var(--mat-sys-surface-container-high); }
+    .move-button:focus-visible { outline: 2px solid var(--mat-sys-primary); outline-offset: -2px; }
+    .move-button:disabled { opacity: .3; cursor: default; }
+    .move-button svg { width: 20px; height: 20px; }
+    .fields-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: var(--spacing-s); margin-top: var(--spacing-s);
+    }
+    .fields-total { font-size: var(--font-s); color: var(--mat-sys-on-surface-variant); }
+    .card-title { margin: 0 0 var(--spacing-sm); font-size: var(--font-m); font-weight: var(--font-weight-semibold); }
+
     /* Formularfelder (schlanker Material-Fill-Look) */
     .field { position: relative; display: flex; flex-direction: column; }
     .field > label {
@@ -328,7 +366,7 @@
       background: var(--mat-sys-outline-variant); color: var(--mat-sys-on-surface);
       border-bottom: 2px solid var(--mat-sys-primary);
     }
-    .filling-row__index { font-weight: var(--font-weight-semibold); font-size: var(--font-m); }
+    .filling-row__index { font-weight: var(--font-weight-semibold); font-size: var(--font-m); overflow-wrap: anywhere; }
     .filling-row__badge {
       display: flex; gap: var(--spacing-s); align-items: center;
       background: var(--mat-sys-primary); color: var(--mat-sys-on-primary);
@@ -346,14 +384,25 @@
       letter-spacing: .5px; margin-bottom: var(--spacing-xs);
     }
     .filling-row__comp-value { font-size: var(--font-m); font-weight: var(--font-weight-medium); color: var(--mat-sys-on-surface); }
+    /* Fields covered by a filling: labelled like the components, one field per line, sizes aligned. */
+    .filling-row__areas { flex-basis: 100%; display: flex; flex-direction: column; }
+    .filling-row__area-list {
+      display: grid; grid-template-columns: minmax(0, max-content) max-content; justify-content: start;
+      column-gap: var(--spacing-m); row-gap: var(--spacing-xxs);
+      font-size: var(--font-m); font-weight: var(--font-weight-medium); color: var(--mat-sys-on-surface);
+    }
+    .filling-row__area-list span { overflow-wrap: anywhere; }
+    .filling-row__area-list .filling-row__area-ha { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
     @media (min-width: 768px) {
       .filling-row { flex-direction: row; }
+      /* Fixed info column: wide content on the right must not squeeze it, so all cards line up. */
       .filling-row__info {
         flex-direction: column; align-items: flex-start; justify-content: center;
-        width: 200px; border-bottom: none; border-right: 2px solid var(--mat-sys-primary);
+        flex: 0 0 200px; border-bottom: none; border-right: 2px solid var(--mat-sys-primary);
         padding: var(--spacing-m); background: var(--mat-sys-surface-container);
       }
+      .filling-row__components { flex: 1 1 auto; min-width: 0; }
       .filling-row__badge {
         flex-direction: column; align-items: flex-start; background: transparent;
         color: var(--mat-sys-on-surface); padding: 0; margin-top: var(--spacing-xs);
@@ -369,32 +418,58 @@
     }
     .app-footer a { color: var(--mat-sys-primary); }
 
-    /* Druck-/PDF-Ansicht: helles, tintensparendes Layout ohne Bedien-Chrome.
-       Bewusst feste Druckfarben (keine Dark-Tokens), da Papier hell ist. */
+    /* Print/PDF: light, ink-saving output with fixed print colours (paper is light, no dark tokens).
+       The calculator never prints its screen view – it prints the separate #printSheet (see below);
+       these generic rules only cover printing the catalog views. */
     @media print {
       :root { color-scheme: light; }
       html, body { background: #ffffff; color: #000000; }
       .page { max-width: none; padding: 0; }
       .no-print { display: none !important; }
       .card { box-shadow: none; border: 1px solid #999999; background: #ffffff; }
-      .app-footer, .field > label, .calc-row-header,
-      .summary-total-row__label, .filling-row__comp-label, .filling-row__comp-value,
-      .filling-row__index, .field__hint { color: #000000; }
-      .field input { background: #ffffff; color: #000000; border-bottom: 1px solid #999999; }
-      /* Combobox-Bedienelemente (Pfeil, X, Vorschlagsliste) gehören nicht aufs Papier. */
+      .app-footer, .app-footer a { color: #000000; }
       .ac-caret, .ac-clear, .ac-menu { display: none !important; }
-      .rate-wrap { background: #ffffff; border-bottom: 1px solid #999999; }
-      .rate-wrap input, .rate-wrap .unit-fixed { background: transparent; color: #000000; border: none; }
-      .rate-split select { background: #ffffff; color: #000000; border: none; border-bottom: 1px solid #999999; }
-      .summary-total-row, .filling-row, .filling-row__components { background: #ffffff; border-color: #999999; }
-      .filling-row__info { background: #eeeeee; color: #000000; border-color: #ff9900; }
-      .filling-row__badge, .summary-total-row__total-value { color: #b35c00; }
-      /* Jede Spritz-Card zusammenhalten – kein Seitenumbruch innerhalb einer Füllung. */
-      .filling-row { break-inside: avoid; page-break-inside: avoid; }
-      .app-footer a { color: #000000; }
       .topbar { position: static; background: #ffffff; }
       .topbar__name { color: #b35c00; }
       .topbar__nav, .topbar__accent { display: none; }
+    }
+
+    /* Print sheet of the calculator: a compact order sheet for the driver, rendered from compute()
+       right before printing. Paper layout in physical units (mm/pt) instead of the screen tokens. */
+    .print-sheet { display: none; }
+    @page { margin: 10mm; }
+    @media print {
+      body[data-view="rechner"] > :not(.print-sheet) { display: none !important; }
+      body[data-view="rechner"] > .print-sheet { display: block; }
+      .print-sheet { font-size: 10pt; line-height: 1.3; color: #000000; }
+      .ps-head { display: flex; align-items: center; gap: 3mm; padding-bottom: 2mm; border-bottom: 1.5pt solid #ff9900; }
+      .ps-logo { height: 8mm; width: auto; display: block; }
+      .ps-brand { font-size: 13pt; font-weight: 700; color: #b35c00; }
+      .ps-title { margin-left: auto; text-align: right; }
+      .ps-title strong { display: block; font-size: 14pt; }
+      .ps-title span { font-size: 8.5pt; color: #444444; }
+      .ps-meta { display: flex; flex-wrap: wrap; gap: 1mm 6mm; margin: 3mm 0 1mm; }
+      .ps-meta b { font-weight: 600; }
+      .ps-h { font-size: 11pt; font-weight: 600; margin: 4mm 0 1mm; }
+      .ps-table { width: 100%; border-collapse: collapse; }
+      .ps-table th, .ps-table td { padding: 1.2mm 1.5mm; border-bottom: 0.5pt solid #999999; text-align: left; vertical-align: top; }
+      .ps-table th { border-bottom: 1pt solid #000000; font-weight: 600; vertical-align: bottom; }
+      .ps-table th small { display: block; font-size: 7.5pt; font-weight: 400; color: #444444; }
+      .ps-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+      .ps-table td.num { white-space: nowrap; }
+      .ps-table th { overflow-wrap: anywhere; }
+      .ps-table tfoot td { border-top: 1pt solid #000000; border-bottom: none; font-weight: 600; }
+      .ps-table tr { break-inside: avoid; page-break-inside: avoid; }
+      .ps-rate td { font-style: italic; color: #444444; }
+      .ps-fill td { padding-top: 2mm; padding-bottom: 2mm; }
+      .ps-idx { white-space: nowrap; }
+      .ps-box { display: inline-block; width: 3.5mm; height: 3.5mm; border: 0.8pt solid #000000; margin-right: 2mm; vertical-align: -0.6mm; }
+      .ps-areas { font-size: 9pt; }
+      .ps-note { margin: 2mm 0; font-style: italic; }
+      .ps-sign { display: flex; gap: 8mm; margin-top: 14mm; break-inside: avoid; page-break-inside: avoid; }
+      .ps-sign > div { flex: 1 1 0; padding-top: 1mm; border-top: 0.8pt solid #000000; font-size: 8pt; color: #444444; }
+      .ps-sign > div:last-child { flex-grow: 1.5; }
+      .ps-foot { margin-top: 5mm; font-size: 7.5pt; color: #444444; }
     }
     /* ===== Auswahl-Modal: Mittel & Anwendung (Etappe 1) ===== */
     .modal-overlay { position: fixed; inset: 0; z-index: 100; display: flex; align-items: flex-start; justify-content: center; padding: 4vh var(--spacing-m); background: rgba(0, 0, 0, 0.62); overflow-y: auto; }
@@ -517,7 +592,7 @@
     .comp-warn__msg--warn { color: #ffc107; }
   </style>
 </head>
-<body>
+<body data-view="rechner">
   <header class="topbar">
     <div class="topbar__inner">
       <div class="topbar__brand">
@@ -560,13 +635,18 @@
     <div id="viewRechner" class="view">
     <div class="stack">
       <section class="card">
-        <div class="grid-inputs">
-          <div class="field ac" id="cardSchlagWrap">
-            <label for="cardSchlag">Schlag</label>
-            <input type="text" id="cardSchlag" autocomplete="off" spellcheck="false" maxlength="80" placeholder="Schlag benennen …" role="combobox" aria-expanded="false" aria-controls="cardSchlagMenu" aria-autocomplete="list" />
-            <button type="button" class="ac-clear" tabindex="-1" aria-label="Schlagname leeren"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.3 5.71 12 12l6.29 6.29-1.42 1.42L10.58 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.3 4.29l6.28 6.3 6.3-6.3z"/></svg></button>
-            <span class="ac-caret" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg></span>
-            <div class="ac-menu" id="cardSchlagMenu" role="listbox" hidden></div>
+        <div class="fields-block" id="fieldsBlock">
+          <div class="field-row-header" aria-hidden="true">
+            <span>Schlag</span>
+            <span>Größe</span>
+          </div>
+          <div id="fieldRows"></div>
+          <div class="fields-footer">
+            <span class="fields-total" id="fieldsTotal"></span>
+            <button type="button" class="secondary-button secondary-button--sm" id="addFieldBtn">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>
+              <span>Schlag hinzufügen</span>
+            </button>
           </div>
         </div>
         <div class="grid-inputs">
@@ -586,13 +666,6 @@
           </div>
         </div>
         <div class="grid-inputs">
-          <div class="field">
-            <label for="fieldSize">Größe des Feldes</label>
-            <div class="rate-wrap">
-              <input id="fieldSize" type="text" inputmode="decimal" autocomplete="off" class="text-right" />
-              <span class="unit-fixed">ha</span>
-            </div>
-          </div>
           <div class="field">
             <label for="tankCapacity">Tankkapazität der Maschine</label>
             <div class="rate-wrap">
@@ -631,6 +704,11 @@
           <span class="summary-total-row__label">Gesamt-Spritzflüssigkeit:</span>
           <span class="summary-total-row__total-value"><span id="totalOverall">0</span> L</span>
         </div>
+      </section>
+
+      <section class="card" id="cardFieldSplit" style="display: none;">
+        <h2 class="card-title">Mengen je Schlag</h2>
+        <div class="fillings-list" id="fieldSplit"></div>
       </section>
 
       <section class="card" id="cardResult" style="display: none;">
@@ -687,6 +765,9 @@
       </p>
     </footer>
   </div>
+
+  <!-- Print-only order sheet of the calculator, filled by renderPrintSheet() right before printing -->
+  <div class="print-sheet" id="printSheet"></div>
 
   <!-- Auswahl-Dialog: Mittel & Anwendung (Etappe 1) -->
   <div class="modal-overlay no-print" id="selectModal" hidden>
@@ -745,8 +826,8 @@
       { code: "ml", label: "ml", liquidPerUnit: 0.001 },
       { code: "kg", label: "kg", liquidPerUnit: 0 },
       { code: "g", label: "g", liquidPerUnit: 0 },
-      { code: "Stk", label: "Stück", liquidPerUnit: 0 },
-      { code: "Tab", label: "Tabletten", liquidPerUnit: 0 },
+      { code: "Stk", label: "Stück", liquidPerUnit: 0, whole: true },
+      { code: "Tab", label: "Tabletten", liquidPerUnit: 0, whole: true },
     ];
     const UNIT_BY_CODE = Object.fromEntries(UNITS.map((u) => [u.code, u]));
     // BVL-Aufwandeinheit-Codes (Kodeliste 25) -> unsere Einheiten.
@@ -756,6 +837,7 @@
     const nf0 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     const nf2 = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const nfHa = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+    const nfRate = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 3 });
     const dateFmt = new Intl.DateTimeFormat("de-DE", { timeZone: "Europe/Berlin", day: "2-digit", month: "2-digit", year: "numeric" });
 
     // ===== Rundung: Math.round((v + EPSILON) * f) / f =====
@@ -764,15 +846,38 @@
       return Math.round((value + Number.EPSILON) * factor) / factor;
     }
 
-    // decimals: 0 (ganzzahlig) oder 2. Wasser immer 0; sonst 0 wenn die Aufwandmenge ganzzahlig ist, sonst 2.
+    // decimals: 0 (whole numbers) or 2. Water always 0; countable units (Stück/Tabletten) 0 when the
+    // rate is an integer; divisible units (L/ml/kg/g) always 2 – so 2.61 ha × 1 L/ha stays 2.61 L
+    // instead of being rounded up to 3 L, and the totals, parts per field and parts per filling
+    // all use the same precision.
     function decimalsFor(comp) {
       if (comp.isWater) return 0;
-      return comp.rate !== null && Number.isInteger(comp.rate) ? 0 : 2;
+      const unit = UNIT_BY_CODE[comp.unit] || UNIT_BY_CODE.L;
+      return unit.whole && comp.rate !== null && Number.isInteger(comp.rate) ? 0 : 2;
+    }
+
+    // Splits a total onto parts proportional to their weights by cumulative rounding: every part is
+    // the difference of the rounded running shares, so the parts never go negative and add up
+    // exactly to the rounded share of the weights (complete = the weights cover the whole total).
+    function splitCumulative(total, weights, weightTotal, decimals, complete) {
+      let cumWeight = 0, prevShare = 0;
+      return weights.map((w, i) => {
+        cumWeight += w;
+        const share = complete && i === weights.length - 1 ? total : round((total * cumWeight) / weightTotal, decimals);
+        const part = round(share - prevShare, decimals);
+        prevShare = share;
+        return part;
+      });
     }
 
     function fmt(value, decimals) {
       if (value === null || value === undefined || Number.isNaN(value)) return "";
       return decimals >= 2 ? nf2.format(value) : nf0.format(value);
+    }
+
+    // Area of a field covered by a filling; 0 marks a tiny filling below 0.01 ha.
+    function areaHaText(ha) {
+      return ha > 0 ? nfHa.format(ha) + " ha" : "< 0,01 ha";
     }
 
     function formatBvlDate(iso) {
@@ -789,8 +894,11 @@
 
     // ===== Zustand =====
     const uid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2));
+    // sizeFromName: lower-cased name whose remembered size was taken over (null = typed by the user).
+    const newField = () => ({ id: uid(), name: "", sizeHa: null, sizeFromName: null });
     const state = {
-      fieldSizeHa: null,
+      // Order matters: the fillings work through the fields in this order.
+      fields: [newField()],
       tankCapacityL: null,
       bufferL: null,
       components: [
@@ -821,33 +929,55 @@
       try { window.localStorage.setItem(key, value); memoryStore.delete(key); return; } catch (e) { storageOk = false; }
       memoryStore.set(key, value);
     }
-    // Liste zuletzt verwendeter Namen (neueste zuerst).
-    function storeList(key) {
+    const validHa = (v) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : null);
+    // Recently used entries (newest first) as { name, ha }. Stored as plain name strings, or as
+    // { name, ha } when a size is remembered with the name (field names only).
+    function storeEntries(key) {
       try {
         const parsed = JSON.parse(rawGet(key) || "[]");
-        return Array.isArray(parsed) ? parsed.filter((v) => typeof v === "string" && v.trim()) : [];
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+          .map((v) => (typeof v === "string" ? { name: v, ha: null } : v && typeof v.name === "string" ? { name: v.name, ha: validHa(v.ha) } : null))
+          .filter((e) => e && e.name.trim());
       } catch (e) { return []; }
     }
-    function storeAdd(key, value) {
+    function storeList(key) {
+      return storeEntries(key).map((e) => e.name);
+    }
+    function storeWrite(key, entries) {
+      rawSet(key, JSON.stringify(entries.map((e) => (e.ha !== null ? { name: e.name, ha: e.ha } : e.name))));
+    }
+    // Without a valid size the previously remembered size of that name is kept.
+    function storeAdd(key, value, ha) {
       const name = (value || "").trim().slice(0, STORE_NAME_MAX);
       if (!name) return storeList(key);
       const lower = name.toLowerCase();
-      const list = [name, ...storeList(key).filter((v) => v.toLowerCase() !== lower)].slice(0, STORE_LIMIT);
-      rawSet(key, JSON.stringify(list));
-      return list;
+      const entries = storeEntries(key);
+      const prev = entries.find((e) => e.name.toLowerCase() === lower);
+      const size = validHa(ha) ?? (prev ? prev.ha : null);
+      const list = [{ name, ha: size }, ...entries.filter((e) => e.name.toLowerCase() !== lower)].slice(0, STORE_LIMIT);
+      storeWrite(key, list);
+      return list.map((e) => e.name);
     }
     function storeRemove(key, value) {
       const lower = (value || "").trim().toLowerCase();
-      const list = storeList(key).filter((v) => v.toLowerCase() !== lower);
-      rawSet(key, JSON.stringify(list));
-      return list;
+      const list = storeEntries(key).filter((e) => e.name.toLowerCase() !== lower);
+      storeWrite(key, list);
+      return list.map((e) => e.name);
     }
 
     // ===== Berechnung =====
     // Flüssige Anteile (Wasser + L/ml) ergeben die Liter-Füllmenge und treiben die Anzahl der Spritzen.
     // Feste Einheiten (kg/g/Stück/Tabletten) werden je Spritze nur anteilig ausgewiesen.
+    // Several fields share one mixture: the totals use the summed area, the fillings work through
+    // the fields in input order (a tank may finish one field and continue on the next).
     function compute() {
-      const fs = Math.max(0, state.fieldSizeHa ?? 0);
+      // Only fields with an area count; unnamed ones are labelled by their position in the list.
+      // Sizes are used rounded to 0.01 ha – exactly as they are displayed.
+      const fields = state.fields
+        .map((f, i) => ({ label: (f.name || "").trim() || "Schlag " + (i + 1), sizeHa: round(Math.max(0, f.sizeHa ?? 0), 2) }))
+        .filter((f) => f.sizeHa > 0);
+      const totalHa = round(fields.reduce((sum, f) => sum + f.sizeHa, 0), 2);
       const tc = Math.max(0, state.tankCapacityL ?? 0);
       const bufferL = Math.max(0, state.bufferL ?? 0);
       // Puffer = Tankreserve: je Spritze wird höchstens bis (Tankkapazität − Puffer) gefüllt.
@@ -858,7 +988,7 @@
         const unit = UNIT_BY_CODE[c.unit] || UNIT_BY_CODE.L;
         const decimals = decimalsFor(c);
         const hasName = c.isWater || !!c.name;
-        const total = hasName && c.rate !== null ? round(fs * c.rate, decimals) : null;
+        const total = hasName && c.rate !== null ? round(totalHa * c.rate, decimals) : null;
         const liquidL = total !== null ? total * unit.liquidPerUnit : 0;
         return { ...c, unitLabel: unit.label, decimals, total, liquidL };
       });
@@ -868,6 +998,7 @@
       const hasLiquid = liquidTotalL > 0;
       // < 1 L nutzbare Kapazität (auch bei fraktionalem Puffer) gilt als "Puffer zu groß".
       const bufferTooLarge = tc > 0 && bufferL > 0 && effectiveCap < 1;
+      const part = (c, amount) => ({ name: c.isWater ? "Wasser" : c.name, unitLabel: c.unitLabel, decimals: c.decimals, amount });
 
       const fillings = [];
       let limitReached = false;
@@ -877,32 +1008,61 @@
         while (remaining > 0) {
           if (idx > 20) { limitReached = true; break; }
           const fuellmengeL = round(Math.min(remaining, effectiveCap), 0);
-          const ratio = fuellmengeL / liquidTotalL;
-          const components = active.map((c) => ({
-            name: c.isWater ? "Wasser" : c.name,
-            unitLabel: c.unitLabel,
-            decimals: c.decimals,
-            amount: round(c.total * ratio, c.decimals),
-          }));
-          fillings.push({ index: idx, fuellmengeL, components });
+          fillings.push({ index: idx, fuellmengeL });
           remaining = round(remaining - fuellmengeL, 0);
           idx++;
         }
 
-        // Ausgleich je Komponente (per Index), damit die Summe über alle Spritzen = Gesamtmenge ist.
-        active.forEach((c, ci) => {
-          const sumInFillings = fillings.reduce((sum, f) => sum + f.components[ci].amount, 0);
-          const diff = round(c.total - sumInFillings, c.decimals);
-          if (diff !== 0 && fillings.length > 0) {
-            const last = fillings[fillings.length - 1].components[ci];
-            // Nie unter 0 (bei winzigen Mengen über viele Spritzen könnte der Ausgleich sonst negativ werden)
-            last.amount = Math.max(0, round(last.amount + diff, c.decimals));
+        // Amounts per filling, proportional to the filled litres (cumulative rounding): they add up
+        // exactly to the total – or, at the limit, to the share actually filled; the rest is not
+        // computed and must not end up on the last filling.
+        const litres = fillings.map((f) => f.fuellmengeL);
+        const perComp = active.map((c) => splitCumulative(c.total, litres, liquidTotalL, c.decimals, !limitReached));
+        fillings.forEach((f, fi) => { f.components = active.map((c, ci) => part(c, perComp[ci][fi])); });
+
+        // Area covered by each filling: the liquid is spread evenly per ha, so the cumulative
+        // litres map linearly onto the fields laid out one after another in input order.
+        // All boundaries are rounded to 0.01 ha before cutting, so the pieces of a field add up
+        // exactly to its size and no "0 ha" slivers appear.
+        let filledL = 0;
+        fillings.forEach((f) => {
+          const fromL = filledL;
+          filledL += f.fuellmengeL;
+          const fromHa = round((fromL / liquidTotalL) * totalHa, 2);
+          const toHa = round((filledL / liquidTotalL) * totalHa, 2);
+          let startHa = 0;
+          f.areas = [];
+          fields.forEach((fld) => {
+            const endHa = round(startHa + fld.sizeHa, 2);
+            const overlapHa = round(Math.min(endHa, toHa) - Math.max(startHa, fromHa), 2);
+            if (overlapHa > 0) f.areas.push({ label: fld.label, ha: overlapHa });
+            startHa = endHa;
+          });
+          // A tiny filling (< 0.01 ha) still names the field it is sprayed on (ha 0 = "< 0,01 ha").
+          if (!f.areas.length) {
+            const midHa = (((fromL + filledL) / 2) / liquidTotalL) * totalHa;
+            let endHa = 0;
+            const fld = fields.find((x) => (endHa += x.sizeHa) >= midHa) || fields[fields.length - 1];
+            f.areas.push({ label: fld.label, ha: 0 });
           }
         });
       }
 
+      // Amounts per field, proportional to the area (cumulative rounding, adds up to the total).
+      const perField = active.map((c) => splitCumulative(c.total, fields.map((f) => f.sizeHa), totalHa, c.decimals, true));
+      const fieldSplit = fields.map((f, fi) => ({
+        label: f.label,
+        sizeHa: f.sizeHa,
+        components: active.map((c, ci) => part(c, perField[ci][fi])),
+      }));
+
       return {
         comps,
+        active,
+        fields: fieldSplit,
+        totalHa,
+        tankCapacityL: tc,
+        bufferL,
         liquidTotalL,
         hasLiquid,
         bufferTooLarge,
@@ -920,6 +1080,12 @@
     const limitWarningEl = document.getElementById("limitWarning");
     const cardResultEl = document.getElementById("cardResult");
     const printRowEl = document.getElementById("printRow");
+    const fieldsBlockEl = document.getElementById("fieldsBlock");
+    const fieldRowsEl = document.getElementById("fieldRows");
+    const fieldsTotalEl = document.getElementById("fieldsTotal");
+    const cardFieldSplitEl = document.getElementById("cardFieldSplit");
+    const fieldSplitEl = document.getElementById("fieldSplit");
+    const printSheetEl = document.getElementById("printSheet");
 
     function svgIcon(path) {
       return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`;
@@ -1151,6 +1317,14 @@
       });
     }
 
+    function componentsHtml(components) {
+      return components.map((c) => `
+            <div class="filling-row__comp">
+              <span class="filling-row__comp-label">${escapeHtml(c.name)}</span>
+              <span class="filling-row__comp-value">${fmt(c.amount, c.decimals)} ${escapeHtml(c.unitLabel)}</span>
+            </div>`).join("");
+    }
+
     // ===== Ergebnis rendern (bei jeder Eingabe) =====
     function renderResults() {
       const result = compute();
@@ -1166,8 +1340,25 @@
       });
 
       totalOverallEl.textContent = fmt(result.liquidTotalL, 0) || "0";
+      fieldsTotalEl.textContent = state.fields.length > 1 && result.totalHa > 0 ? "Gesamtfläche: " + nfHa.format(result.totalHa) + " ha" : "";
 
       renderWarnings();
+
+      // Amounts per field only make sense with several fields.
+      const multiField = result.fields.length > 1;
+      const showSplit = multiField && result.active.length > 0;
+      cardFieldSplitEl.style.display = showSplit ? "" : "none";
+      fieldSplitEl.innerHTML = !showSplit ? "" : result.fields.map((f) => `
+          <div class="filling-row">
+            <div class="filling-row__info">
+              <span class="filling-row__index">${escapeHtml(f.label)}</span>
+              <div class="filling-row__badge">
+                <span class="filling-row__badge-label">Fläche</span>
+                <span class="filling-row__badge-value">${nfHa.format(f.sizeHa)} ha</span>
+              </div>
+            </div>
+            <div class="filling-row__components">${componentsHtml(f.components)}</div>
+          </div>`).join("");
 
       // Ergebnis-Card nur zeigen, wenn es etwas anzuzeigen gibt; Drucken nur bei echter Aufteilung.
       const hasResult = result.fillings.length > 0 || result.bufferTooLarge || result.solidsOnly;
@@ -1195,15 +1386,16 @@
       result.fillings.forEach((filling) => {
         const el = document.createElement("div");
         el.className = "filling-row";
-        const comps = filling.components
-          .map(
-            (c) => `
-            <div class="filling-row__comp">
-              <span class="filling-row__comp-label">${escapeHtml(c.name)}</span>
-              <span class="filling-row__comp-value">${fmt(c.amount, c.decimals)} ${escapeHtml(c.unitLabel)}</span>
-            </div>`
-          )
-          .join("");
+        let comps = componentsHtml(filling.components);
+        if (multiField && filling.areas.length) {
+          const rows = filling.areas
+            .map((a) => `<span>${escapeHtml(a.label)}</span><span class="filling-row__area-ha">${escapeHtml(areaHaText(a.ha))}</span>`).join("");
+          comps += `
+            <div class="filling-row__areas">
+              <span class="filling-row__comp-label">${filling.areas.length > 1 ? "Schläge" : "Schlag"}</span>
+              <div class="filling-row__area-list">${rows}</div>
+            </div>`;
+        }
         el.innerHTML = `
           <div class="filling-row__info">
             <span class="filling-row__index">${filling.index}. Spritze</span>
@@ -1217,8 +1409,86 @@
       });
     }
 
+    // ===== Print sheet: compact order sheet for the driver, only visible in print =====
+    // Rendered right before printing, so it always reflects the current inputs.
+    function renderPrintSheet() {
+      const r = compute();
+      const multiField = r.fields.length > 1;
+      const cols = r.active;
+      const tankL = r.tankCapacityL;
+      const bufferL = r.bufferL;
+      const kultur = cardKultur.value.trim();
+      const schadorg = cardSchadorg.value.trim();
+
+      const meta = [];
+      if (kultur) meta.push(["Kultur", kultur]);
+      if (schadorg) meta.push(["Schadorganismus", schadorg]);
+      if (r.totalHa > 0) meta.push([multiField ? "Gesamtfläche" : "Fläche", nfHa.format(r.totalHa) + " ha"]);
+      if (tankL > 0) meta.push(["Tank", nf0.format(tankL) + " L" + (bufferL > 0 ? " (Reserve " + nf0.format(bufferL) + " L)" : "")]);
+      if (r.hasLiquid) meta.push(["Spritzbrühe", nf0.format(r.liquidTotalL) + " L"]);
+      if (r.fillings.length) meta.push(["Füllungen", String(r.fillings.length)]);
+
+      const colHead = (c) => {
+        const sub = c.registrationNumber
+          ? (c.isZusatz ? "Kennr. " : "Zul.-Nr. ") + c.registrationNumber + (isExpired(c.authEndDate) ? " · abgelaufen" : "")
+          : "";
+        return `<th class="num">${escapeHtml(c.isWater ? "Wasser" : c.name)}${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</th>`;
+      };
+      const colHeads = cols.map(colHead).join("");
+      const amountCells = (components) => components
+        .map((c) => `<td class="num">${fmt(c.amount, c.decimals)} ${escapeHtml(c.unitLabel)}</td>`).join("");
+      const areasText = (areas, sep) => areas.map((a) => escapeHtml(a.label + " " + areaHaText(a.ha))).join(sep);
+
+      let body;
+      if (!cols.length) {
+        body = `<p class="ps-note">Noch keine vollständige Berechnung – Schlaggröße, Mittel und Aufwandmengen eintragen.</p>`;
+      } else {
+        const rateRow = `<tr class="ps-rate"><td>Aufwand je ha</td><td></td>${cols
+          .map((c) => `<td class="num">${nfRate.format(c.rate)} ${escapeHtml(c.unitLabel)}/ha</td>`).join("")}</tr>`;
+        const fieldRows = r.fields
+          .map((f) => `<tr><td>${escapeHtml(f.label)}</td><td class="num">${nfHa.format(f.sizeHa)} ha</td>${amountCells(f.components)}</tr>`).join("");
+        const foot = !multiField ? "" : `<tfoot><tr><td>Gesamt</td><td class="num">${nfHa.format(r.totalHa)} ha</td>${cols
+          .map((c) => `<td class="num">${fmt(c.total, c.decimals)} ${escapeHtml(c.unitLabel)}</td>`).join("")}</tr></tfoot>`;
+        body = `<h2 class="ps-h">${multiField ? "Mengen je Schlag" : "Mengen"}</h2>
+          <table class="ps-table">
+            <thead><tr><th>Schlag</th><th class="num">Fläche</th>${colHeads}</tr></thead>
+            <tbody>${rateRow}${fieldRows}</tbody>${foot}
+          </table>
+          <h2 class="ps-h">Tankfüllungen</h2>`;
+        if (r.fillings.length) {
+          const rows = r.fillings.map((f) => `<tr>
+              <td class="ps-idx"><span class="ps-box"></span>${f.index}.</td>
+              <td class="num"><strong>${nf0.format(f.fuellmengeL)} L</strong></td>
+              ${amountCells(f.components)}
+              ${multiField ? `<td class="ps-areas">${areasText(f.areas, "<br>")}</td>` : ""}
+            </tr>`).join("");
+          body += `<table class="ps-table ps-fill">
+            <thead><tr><th>Spritze</th><th class="num">Füllmenge</th>${colHeads}${multiField ? "<th>Schläge</th>" : ""}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+          if (r.limitReached) body += `<p class="ps-note">Das Limit von 20 Füllungen wurde erreicht – die Aufteilung ist unvollständig.</p>`;
+        } else {
+          const reason = r.bufferTooLarge ? "der Puffer ist so groß wie die Tankkapazität oder größer."
+            : r.solidsOnly ? "keine Flüssigkeit (Wasser oder Mittel in L/ml) angegeben."
+            : "keine Tankkapazität angegeben.";
+          body += `<p class="ps-note">Keine Aufteilung auf Spritzen – ${reason}</p>`;
+        }
+      }
+
+      const logo = document.querySelector(".topbar__logo");
+      printSheetEl.innerHTML = `
+        <header class="ps-head">
+          ${logo ? `<img class="ps-logo" src="${escapeHtml(logo.getAttribute("src"))}" alt="" />` : ""}
+          <span class="ps-brand">Agrar Assistent</span>
+          <div class="ps-title"><strong>Spritzauftrag</strong><span>erstellt am ${dateFmt.format(new Date())}</span></div>
+        </header>
+        <div class="ps-meta">${meta.map(([k, v]) => `<span><b>${k}:</b> ${escapeHtml(v)}</span>`).join("")}</div>
+        ${body}
+        <div class="ps-sign"><div>Datum der Ausführung</div><div>Name (Druckbuchstaben)</div><div>Unterschrift</div></div>
+        <p class="ps-foot">Erstellt mit Agrar Assistent. Angaben ohne Gewähr – maßgeblich sind die amtliche Zulassung und das Produktetikett.</p>`;
+    }
+
     // ===== Top-Level-Eingaben =====
-    const fieldSizeInput = document.getElementById("fieldSize");
     const tankCapacityInput = document.getElementById("tankCapacity");
     const bufferInput = document.getElementById("buffer");
 
@@ -1248,29 +1518,39 @@
       });
     }
 
-    setupNumericField(fieldSizeInput, true, () => state.fieldSizeHa, (n) => { state.fieldSizeHa = n; });
     setupNumericField(tankCapacityInput, false, () => state.tankCapacityL, (n) => { state.tankCapacityL = n; });
     setupNumericField(bufferInput, false, () => state.bufferL, (n) => { state.bufferL = n; });
 
-    // ===== Schlag: Freitext mit lokalem Verlauf =====
-    // Kein BVL-Bezug – die Vorschläge kommen ausschließlich aus dem Browser des Nutzers und
-    // sind einzeln über das X in der Liste löschbar.
-    function setupFieldNameCombo(input, menu) {
+    // ===== Fields (Schläge): free text with local history (name + last used size) =====
+    // No BVL involved – the suggestions come only from the user's browser and can be deleted
+    // one by one via the X in the list.
+    function setupFieldNameCombo(input, menu, field, sizeInput) {
       let shown = [], activeIdx = -1;
       // Gerade aus der Liste gelöschte Namen: dürfen nicht durch commit() sofort wieder
       // auftauchen, nur weil einer noch im Eingabefeld steht. Gilt bis zur nächsten Eingabe.
       const removed = new Set();
       const hide = () => { menu.hidden = true; input.setAttribute("aria-expanded", "false"); activeIdx = -1; };
       const render = (keepActive) => {
-        const all = storeList(STORE_FIELD_NAMES);
+        const stored = storeEntries(STORE_FIELD_NAMES);
+        // A field already entered in another row is not offered a second time – except the row's
+        // own current name (also when typed twice), so it stays selectable and deletable here.
+        const own = (field.name || "").trim().toLowerCase();
+        const taken = new Set(state.fields.filter((f) => f !== field)
+          .map((f) => (f.name || "").trim().toLowerCase())
+          .filter((name) => name && name !== own));
+        const all = stored.filter((e) => !taken.has(e.name.toLowerCase()));
         const term = input.value.trim().toLowerCase();
-        shown = term ? all.filter((v) => v.toLowerCase().includes(term)) : all;
+        shown = term ? all.filter((e) => e.name.toLowerCase().includes(term)) : all;
         if (!shown.length) {
-          menu.innerHTML = '<div class="ac-empty">' + (all.length ? "Keine Treffer" : "Noch keine Schläge gemerkt – Name eintippen, er wird beim Verlassen des Feldes gemerkt.") + "</div>";
+          const empty = all.length ? "Keine Treffer"
+            : stored.length ? "Alle gemerkten Schläge sind schon eingetragen."
+            : "Noch keine Schläge gemerkt – Name eintippen, er wird beim Verlassen des Feldes gemerkt.";
+          menu.innerHTML = '<div class="ac-empty">' + empty + "</div>";
         } else {
-          menu.innerHTML = shown.map((v, i) =>
-            '<div class="ac-row" role="presentation"><button type="button" class="ac-item" role="option" data-i="' + i + '">' + escapeHtml(v) + "</button>" +
-            '<button type="button" class="ac-del" data-del="' + i + '" tabindex="-1" title="Aus der Liste löschen (Entf)" aria-label="' + escapeHtml(v) + ' aus der Liste löschen">' + svgIcon(ICON_CLOSE) + "</button></div>").join("");
+          menu.innerHTML = shown.map((e, i) =>
+            '<div class="ac-row" role="presentation"><button type="button" class="ac-item" role="option" data-i="' + i + '">' + escapeHtml(e.name) +
+            (e.ha !== null ? " <small>" + nfHa.format(e.ha) + " ha</small>" : "") + "</button>" +
+            '<button type="button" class="ac-del" data-del="' + i + '" tabindex="-1" title="Aus der Liste löschen (Entf)" aria-label="' + escapeHtml(e.name) + ' aus der Liste löschen">' + svgIcon(ICON_CLOSE) + "</button></div>").join("");
         }
         menu.hidden = false; input.setAttribute("aria-expanded", "true");
         activeIdx = keepActive ? Math.min(activeIdx, shown.length - 1) : -1;
@@ -1283,42 +1563,158 @@
         items.forEach((b, i) => b.classList.toggle("ac-item--active", i === activeIdx));
         if (items[activeIdx]) items[activeIdx].scrollIntoView({ block: "nearest" });
       };
+      // A size taken over from the history belongs to that name only (field.sizeFromName);
+      // a size typed by the user has no such origin and is kept on renaming.
+      const setSize = (ha, fromName) => {
+        field.sizeHa = ha; field.sizeFromName = fromName.toLowerCase();
+        if (document.activeElement !== sizeInput) sizeInput.value = nfHa.format(ha);
+      };
+      // Returns true if a size of another remembered name had to be dropped.
+      const dropForeignSize = (name) => {
+        if (field.sizeFromName === null || field.sizeFromName === name.toLowerCase()) return false;
+        field.sizeHa = null; field.sizeFromName = null;
+        if (document.activeElement !== sizeInput) sizeInput.value = "";
+        return true;
+      };
       const remove = (name) => { removed.add(name.toLowerCase()); storeRemove(STORE_FIELD_NAMES, name); };
-      const choose = (name) => { input.value = name; removed.clear(); storeAdd(STORE_FIELD_NAMES, name); hide(); };
+      // Picking a remembered field also takes over its remembered size.
+      const choose = (entry) => {
+        input.value = entry.name; field.name = entry.name; removed.clear();
+        dropForeignSize(entry.name);
+        if (entry.ha !== null) setSize(entry.ha, entry.name);
+        storeAdd(STORE_FIELD_NAMES, entry.name);
+        hide(); renderResults();
+      };
       // Eingetippte Namen erst beim Verlassen des Feldes merken (nicht bei jedem Tastendruck).
-      const commit = () => { const v = input.value.trim(); if (v && !removed.has(v.toLowerCase())) storeAdd(STORE_FIELD_NAMES, v); };
+      // Leaving the name field with a known name fills in its size if none is entered yet;
+      // leaving the size field only remembers it (a deliberately cleared size stays empty).
+      const commit = (fillSize) => {
+        const v = input.value.trim();
+        // An emptied name keeps no size of a remembered field (it would be offered again elsewhere).
+        if (!v) { if (fillSize && dropForeignSize("")) renderResults(); return; }
+        // Also for a name just deleted from the list: a foreign size must not stay with it.
+        if (fillSize) {
+          let changed = dropForeignSize(v);
+          if (field.sizeHa === null) {
+            const known = storeEntries(STORE_FIELD_NAMES).find((e) => e.name.toLowerCase() === v.toLowerCase());
+            if (known && known.ha !== null) { setSize(known.ha, known.name); changed = true; }
+          }
+          if (changed) renderResults();
+        }
+        // Only a typed size is remembered – one taken from the history is stored already.
+        if (!removed.has(v.toLowerCase())) storeAdd(STORE_FIELD_NAMES, v, field.sizeFromName === null ? field.sizeHa : null);
+      };
 
       input.addEventListener("focus", open);
-      input.addEventListener("input", () => { removed.clear(); open(); });
+      input.addEventListener("input", () => { field.name = input.value; removed.clear(); open(); renderResults(); });
       input.addEventListener("click", open); // erneuter Klick ins bereits fokussierte Feld klappt die Liste wieder auf
       menu.addEventListener("mousedown", (e) => {
         const del = e.target.closest(".ac-del");
         const item = e.target.closest(".ac-item");
         if (!del && !item) return;
         e.preventDefault(); // Fokus im Eingabefeld halten
-        const name = shown[parseInt(del ? del.dataset.del : item.dataset.i, 10)];
-        if (name === undefined) return;
-        if (del) { remove(name); open(); }
-        else choose(name);
+        const entry = shown[parseInt(del ? del.dataset.del : item.dataset.i, 10)];
+        if (entry === undefined) return;
+        if (del) { remove(entry.name); open(); }
+        else choose(entry);
       });
       input.addEventListener("keydown", (e) => {
         if (menu.hidden) { if (e.key === "ArrowDown") { e.preventDefault(); open(); } return; }
         const count = menu.querySelectorAll(".ac-item").length;
         if (e.key === "ArrowDown") { e.preventDefault(); activeIdx = Math.min(activeIdx + 1, count - 1); }
         else if (e.key === "ArrowUp") { e.preventDefault(); activeIdx = Math.max(activeIdx - 1, 0); }
-        else if (e.key === "Enter") { if (activeIdx >= 0 && shown[activeIdx] !== undefined) { e.preventDefault(); choose(shown[activeIdx]); } else { commit(); hide(); } return; }
-        else if (e.key === "Delete") { if (activeIdx >= 0 && shown[activeIdx] !== undefined) { e.preventDefault(); remove(shown[activeIdx]); render(true); } return; }
+        else if (e.key === "Enter") { if (activeIdx >= 0 && shown[activeIdx] !== undefined) { e.preventDefault(); choose(shown[activeIdx]); } else { commit(true); hide(); } return; }
+        else if (e.key === "Delete") { if (activeIdx >= 0 && shown[activeIdx] !== undefined) { e.preventDefault(); remove(shown[activeIdx].name); render(true); } return; }
         else if (e.key === "Escape") { hide(); return; }
         else return;
         markActive();
       });
       const clearBtn = input.parentElement.querySelector(".ac-clear");
-      if (clearBtn) clearBtn.addEventListener("mousedown", (e) => { e.preventDefault(); input.value = ""; removed.clear(); hide(); });
+      if (clearBtn) clearBtn.addEventListener("mousedown", (e) => { e.preventDefault(); input.value = ""; field.name = ""; removed.clear(); dropForeignSize(""); hide(); renderResults(); });
       // Verzögert schließen (Klick auf einen Menüeintrag zuerst zulassen) – aber nur,
       // wenn das Feld inzwischen nicht schon wieder den Fokus hat.
-      input.addEventListener("blur", () => { commit(); setTimeout(() => { if (document.activeElement !== input) hide(); }, 150); });
+      input.addEventListener("blur", () => { commit(true); setTimeout(() => { if (document.activeElement !== input) hide(); }, 150); });
+      return { commit };
     }
-    setupFieldNameCombo(document.getElementById("cardSchlag"), document.getElementById("cardSchlagMenu"));
+
+    const ICON_MOVE_UP = "M7.41 15.41 12 10.83l4.59 4.58L18 14l-6-6-6 6z";
+    const ICON_MOVE_DOWN = "M7.41 8.59 12 13.17l4.59-4.58L18 10l-6 6-6-6z";
+
+    // One row per field (structure render only on add/remove/move, so typing never loses focus).
+    function renderFieldRows() {
+      const multi = state.fields.length > 1;
+      fieldsBlockEl.classList.toggle("with-actions", multi);
+      fieldRowsEl.innerHTML = "";
+      state.fields.forEach((field, i) => {
+        const n = i + 1;
+        const row = document.createElement("div");
+        row.className = "field-row";
+        row.dataset.id = field.id;
+        row.innerHTML = `
+          <div class="field ac">
+            <input type="text" class="field-name" autocomplete="off" spellcheck="false" maxlength="${STORE_NAME_MAX}" placeholder="Schlag ${n} benennen …" role="combobox" aria-expanded="false" aria-controls="fieldMenu-${field.id}" aria-autocomplete="list" aria-label="Name von Schlag ${n}" />
+            <button type="button" class="ac-clear" tabindex="-1" aria-label="Name von Schlag ${n} leeren">${svgIcon(ICON_CLOSE)}</button>
+            <span class="ac-caret" aria-hidden="true">${svgIcon(ICON_CHEVRON)}</span>
+            <div class="ac-menu" id="fieldMenu-${field.id}" role="listbox" hidden></div>
+          </div>
+          <div class="field">
+            <div class="rate-wrap">
+              <input type="text" class="field-size text-right" inputmode="decimal" autocomplete="off" aria-label="Größe von Schlag ${n} in Hektar" />
+              <span class="unit-fixed">ha</span>
+            </div>
+          </div>
+          ${!multi ? "" : `
+          <div class="field-row__actions">
+            <div class="field-move">
+              <button type="button" class="move-button" data-move="-1" title="Nach oben" aria-label="Schlag ${n} nach oben"${i === 0 ? " disabled" : ""}>${svgIcon(ICON_MOVE_UP)}</button>
+              <button type="button" class="move-button" data-move="1" title="Nach unten" aria-label="Schlag ${n} nach unten"${i === state.fields.length - 1 ? " disabled" : ""}>${svgIcon(ICON_MOVE_DOWN)}</button>
+            </div>
+            <button type="button" class="icon-button field-delete" title="Schlag entfernen" aria-label="Schlag ${n} entfernen">${svgIcon(ICON_DELETE)}</button>
+          </div>`}`;
+        fieldRowsEl.appendChild(row);
+
+        const nameInput = row.querySelector(".field-name");
+        const sizeInput = row.querySelector(".field-size");
+        nameInput.value = field.name;
+        sizeInput.value = field.sizeHa === null ? "" : nfHa.format(field.sizeHa);
+        const combo = setupFieldNameCombo(nameInput, row.querySelector(".ac-menu"), field, sizeInput);
+        setupNumericField(sizeInput, true, () => field.sizeHa, (v) => { field.sizeHa = v; field.sizeFromName = null; });
+        // Remember the size with the name once the size field is left.
+        sizeInput.addEventListener("blur", () => combo.commit(false));
+        row.querySelectorAll(".move-button").forEach((btn) => btn.addEventListener("click", () => moveField(field, Number(btn.dataset.move))));
+        const delBtn = row.querySelector(".field-delete");
+        if (delBtn) delBtn.addEventListener("click", () => {
+          state.fields = state.fields.filter((f) => f.id !== field.id);
+          renderFieldRows();
+          // The clicked button is gone: move the focus to the neighbouring row (or the add button).
+          const dels = fieldRowsEl.querySelectorAll(".field-delete");
+          const next = dels[Math.min(i, dels.length - 1)];
+          (next || document.getElementById("addFieldBtn")).focus();
+        });
+      });
+      renderResults();
+    }
+
+    // The order of the fields is the order the fillings work through them.
+    function moveField(field, delta) {
+      const from = state.fields.indexOf(field);
+      const to = from + delta;
+      if (from < 0 || to < 0 || to >= state.fields.length) return;
+      state.fields.splice(from, 1);
+      state.fields.splice(to, 0, field);
+      renderFieldRows();
+      // Keep the focus on the moved row so it can be moved further by keyboard.
+      const row = fieldRowsEl.querySelector(`.field-row[data-id="${field.id}"]`);
+      const btn = row && (row.querySelector(`.move-button[data-move="${delta}"]:not(:disabled)`) || row.querySelector(".move-button:not(:disabled)"));
+      if (btn) btn.focus();
+    }
+
+    document.getElementById("addFieldBtn").addEventListener("click", () => {
+      state.fields.push(newField());
+      renderFieldRows();
+      const inputs = fieldRowsEl.querySelectorAll(".field-name");
+      inputs[inputs.length - 1].focus();
+    });
 
     document.getElementById("addBtn").addEventListener("click", () => {
       const comp = { id: uid(), isWater: false, name: "", unit: "L", rate: null, unitFixed: false, registrationNumber: "", authEndDate: null };
@@ -1327,7 +1723,9 @@
       openModalFor(comp);
     });
 
-    document.getElementById("printBtn").addEventListener("click", () => window.print());
+    document.getElementById("printBtn").addEventListener("click", () => { renderPrintSheet(); window.print(); });
+    // Also covers printing via the browser menu / Ctrl+P.
+    window.addEventListener("beforeprint", renderPrintSheet);
 
     // ===== Tab-Umschaltung (Rechner / Katalog) =====
     const tabButtons = document.querySelectorAll(".topbar__tab");
@@ -1339,6 +1737,8 @@
     function switchView(name) {
       if (!views[name]) return;
       Object.keys(views).forEach((key) => { views[key].hidden = key !== name; });
+      // Selects the print layout: the calculator prints its own sheet, the catalogs their screen view.
+      document.body.dataset.view = name;
       tabButtons.forEach((btn) => {
         const active = btn.dataset.view === name;
         btn.classList.toggle("topbar__tab--active", active);
@@ -2524,6 +2924,7 @@
         .then((rows) => { rows.forEach((r) => { if (r.kode && r.kodetext && r.sperre !== "J") BVL_UNIT_LABEL[r.kode] = r.kodetext; }); })
         .catch(() => {});
     })();
+    renderFieldRows();
     renderRows();
   </script>
 </body>
